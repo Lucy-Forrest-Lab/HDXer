@@ -5,7 +5,7 @@ HDXer
 [![AppVeyor Build status](https://ci.appveyor.com/api/projects/status/REPLACE_WITH_APPVEYOR_LINK/branch/master?svg=true)](https://ci.appveyor.com/project/rtb1c13/HDXer/branch/master)
 [![codecov](https://codecov.io/gh/rtb1c13/HDXer/branch/master/graph/badge.svg)](https://codecov.io/gh/rtb1c13/HDXer/branch/master)
 
-HDXer is a package to predict Hydrogen-Deuterium exchange data from biomolecular simulations, compare to experiment, and perform ensemble refinement to fit a structrual ensemble to the experimental data
+HDXer is a package to predict Hydrogen-Deuterium exchange data from biomolecular simulations, compare to experiment, and perform ensemble refinement to fit a structural ensemble to the experimental data
 
 ### Copyright
 
