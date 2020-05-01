@@ -7,32 +7,60 @@
 #
 #
 # Dependencies
-import mdtraj as md
-import sys, ast
 import argparse
+import ast
+import sys
 from functools import reduce
-# 
-import Functions, Methods, Analysis
+
+# HDXer modules
+import Analysis
+import Functions
+import Methods
 
 
 ### Argparser ###
 def parse():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-t","--traj",help="Trajectory/ies for analysis",nargs='+',type=str, required=True)
-    parser.add_argument("-p","--parm",help="Topology file to be used for analysis",type=str, required=True)
-    parser.add_argument("-s","--start",help="Frame at which to start (inclusive) reading each trajectory. Default = 1 (every frame)", type=int, default=1)
-    parser.add_argument("-e","--end",help="Frame at which to end (inclusive) reading each trajectory. Default = final frame", type=int)
-    parser.add_argument("-str","--stride",help="Stride at which to read the trajectory. Default = 1 (every frame)", type=int, default=1)
-    parser.add_argument("-c","--chunks",help="If set, trajectory will be read in chunks of this size (lowers memory requirements for large trajectories). Default = 1000", nargs='?', type=int, const=1000)
-    parser.add_argument("-sel","--select",help="MDTraj format selection string for atoms to select for analysis from trajectories. Default = 'all'", default='all')
-    parser.add_argument("-m","--method",help="Method for analysis. Currently choose between 'Radou' or 'PerssonHalle'", choices=['Radou', 'PerssonHalle'], default='Radou', required=True)
-    parser.add_argument("-dt","--times",help="Times for analysis, in minutes. Defaults to [ 0.167, 1.0, 10.0, 120.0 ]", nargs='+', default=[0.167, 1.0, 10.0, 120.0], type=float)
-    parser.add_argument("-log","--logfile",help="Name of logfile for printout of run info. Defaults to 'HDX_analysis.log'", type=str, default='HDX_analysis.log')
-    parser.add_argument("-seg","--segfile",help="Name of file with segment definitions for analysis. Segments should be defined one per line, with starting/finishing residues whitespace separated. Defaults to 'segfile.txt'",type=str, default='segfile.txt')
-    parser.add_argument("-exp","--expfile",help="Name of file with experimental deuterated fractions. Segments should be identical to those in segfile, defined one per line, followed by one column for each timepoint in --times. Whitespace separated. No default.")
-    parser.add_argument("-out","--outprefix",help="Prefix for prediction output files",type=str, default='')
-    parser.add_argument("-mopt","--method_options",help="Additional method options. Should be provided as a single string in Python dictionary format, e.g.:  '{ 'hbond_method' : 'contacts', 'cut_Nc' : 0.70, 'save_detailed' : True }' (Note the string must be enclosed in quotes)",type=str)
-    parser.add_argument("-aopt","--analysis_options",help="Additional analysis options. Should be provided as a single string in Python dictionary format, e.g.:  '{ 'figs' : True }' (Note the string must be enclosed in quotes)",type=str)
+    parser.add_argument("-t", "--traj", help="Trajectory/ies for analysis", nargs='+', type=str, required=True)
+    parser.add_argument("-p", "--parm", help="Topology file to be used for analysis", type=str, required=True)
+    parser.add_argument("-s", "--start", help="Frame at which to start (inclusive) reading each trajectory. "
+                                              "Default = 1 (every frame)", type=int, default=1)
+    parser.add_argument("-e", "--end", help="Frame at which to end (inclusive) reading each trajectory. "
+                                            "Default = final frame", type=int)
+    parser.add_argument("-str", "--stride", help="Stride at which to read the trajectory. Default = 1 (every frame)",
+                        type=int, default=1)
+    parser.add_argument("-c", "--chunks", help="If set, trajectory will be read in chunks of this size (lowers memory "
+                                               "requirements for large trajectories). Default = 1000", nargs='?',
+                        type=int, const=1000)
+    parser.add_argument("-sel", "--select", help="MDTraj format selection string for atoms to select for analysis from "
+                                                 "trajectories. Default = 'all'", default='all')
+    parser.add_argument("-m", "--method", help="Method for analysis. Currently choose between "
+                                               "'Radou' or 'PerssonHalle'. Default = 'Radou'",
+                        choices=['Radou', 'PerssonHalle'], default='Radou', required=True)
+    parser.add_argument("-dt", "--times", help="Times for analysis, in minutes. "
+                                               "Defaults to [ 0.167, 1.0, 10.0, 120.0 ]",
+                        nargs='+', default=[0.167, 1.0, 10.0, 120.0], type=float)
+    parser.add_argument("-log", "--logfile", help="Name of logfile for printout of run info. "
+                                                  "Defaults to 'HDX_analysis.log'",
+                        type=str, default='HDX_analysis.log')
+    parser.add_argument("-seg", "--segfile", help="Name of file with segment definitions for analysis. Segments "
+                                                  "should be defined one per line, with starting/finishing residues "
+                                                  "whitespace separated. Defaults to 'segfile.txt'",
+                        type=str, default='segfile.txt')
+    parser.add_argument("-exp", "--expfile", help="Name of file with experimental deuterated fractions. Segments "
+                                                  "should be identical to those in segfile, defined one per line, "
+                                                  "followed by one column for each timepoint in --times. Whitespace "
+                                                  "separated. No default.")
+    parser.add_argument("-out", "--outprefix", help="Prefix for prediction output files", type=str, default='')
+    parser.add_argument("-mopt", "--method_options", help="Additional method options. Should be provided as a single "
+                                                          "string in Python dictionary format, e.g.:  '{ "
+                                                          "'hbond_method' : 'contacts', 'cut_Nc' : 0.70, "
+                                                          "'save_detailed' : True }' (Note the string must be "
+                                                          "enclosed in quotes)", type=str)
+    parser.add_argument("-aopt", "--analysis_options", help="Additional analysis options. Should be provided as a "
+                                                            "single string in Python dictionary format, "
+                                                            "e.g.:  '{ 'figs' : True }' (Note the string must be "
+                                                            "enclosed in quotes)", type=str)
 
     if len(sys.argv)==1:
         parser.print_help()
@@ -45,10 +73,13 @@ def parse():
             if isinstance(optdict, dict):
                 args.method_options = optdict
             else:
-                raise Functions.HDX_Error("Your options flag isn't a dictionary. Dictionary format with key/value pairs is required")
+                raise Functions.HDX_Error("Your options flag isn't a dictionary. Dictionary format with key/value "
+                                          "pairs is required")
         except ValueError:
-            raise Functions.HDX_Error("There's something wrong with the syntax of your options flag. Check it's formatted like a Python dictionary")
+            raise Functions.HDX_Error("There's something wrong with the syntax of your options flag. Check it's "
+                                      "formatted like a Python dictionary")
     return args
+
 
 ### Main prediction functions ###
 def _get_method(name):
@@ -58,10 +89,12 @@ def _get_method(name):
                 'perssonhalle' : Methods.PH }
 
     return methods[name.lower()]
-    
+
+
 def _update_options(opts, **updates):
     """Update options dictionary with extra kwargs"""
     opts.update(updates)
+
 
 def predict(traj, method, mopts, aopts, saveprefix=None):
     """Predicts fraction of deuterium exchange for residues in the given
@@ -84,6 +117,7 @@ def predict(traj, method, mopts, aopts, saveprefix=None):
     a_obj = Analysis.Analyze(m_obj, m_obj.top, **aopts)
     return m_obj, a_obj
 
+
 def combine_results(first, second):
     """Sum objects in given tuples using the __add__ method of
        each object. e.g.
@@ -101,6 +135,7 @@ def combine_results(first, second):
     comb = [ a + b for a, b in zip(first, second) ]
     return tuple(comb)
 
+
 def full(trajlist, parm, start, stop, stride, select, method, mopts, aopts, saveprefix):
     """Loads all trajectories in the given list and performs HDX predictions.
        'slicelist' is a list of indices for slicing the trajectory
@@ -114,6 +149,7 @@ def full(trajlist, parm, start, stop, stride, select, method, mopts, aopts, save
     tslice = Functions.select(t, select)
     summed_results, summed_analysis = predict(tslice, method, mopts, aopts, saveprefix)
     return summed_results, summed_analysis
+
 
 def chunks(trajlist, parm, start, stop, stride, select, chunksize, method, mopts, aopts, saveprefix):
     """Load trajectories in the given list in chunks and perform HDX predictions.
