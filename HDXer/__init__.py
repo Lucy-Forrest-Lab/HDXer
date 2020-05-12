@@ -4,6 +4,7 @@ HDXer is a package to predict Hydrogen-Deuterium exchange data from biomolecular
 """
 
 # Add imports here
+import Reweighting
 from .hdxer import *
 
 # Handle versioneer
