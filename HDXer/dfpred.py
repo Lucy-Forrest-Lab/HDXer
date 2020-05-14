@@ -1,11 +1,11 @@
-#!/usr/bin/env python
-
-# Class for HDX deuterated fraction prediction objects
+# Superclass for HDX deuterated fraction prediction method objects
 #
+
 import mdtraj as md
 import numpy as np
-import os, glob, itertools, pickle
-import Functions
+import os, glob, pickle
+from .functions import list_prolines
+from .errors import HDX_Error
 
 
 class DfPredictor(object):
@@ -136,11 +136,11 @@ class DfPredictor(object):
             try:
                 self.top = pickle.load(open(self.params['outprefix']+"topology.pkl", 'rb'))
             except (IOError, EOFError):
-                raise Functions.HDX_Error("Can't read cached topology file %s. "\
+                raise HDX_Error("Can't read cached topology file %s. "\
                                           "Re-run calculation after removing the file." \
                                            % (self.params['outprefix']+"topology.pkl"))
         else:
-            raise Functions.HDX_Error("No such cache file %s. Re-run the calculation, it should be " \
+            raise HDX_Error("No such cache file %s. Re-run the calculation, it should be " \
                                       "created automatically if a Df prediction is run." \
                                       % (self.params['outprefix']+"topology.pkl"))
 
@@ -174,7 +174,7 @@ class DfPredictor(object):
     def assign_cis_proline(self):
         """Assigns cis-proline residues on a by-frame basis"""
 
-        prolines = Functions.list_prolines(self.t, log=self.params['logfile'])
+        prolines = list_prolines(self.t, log=self.params['logfile'])
         if prolines is None:
             pass
         else:
@@ -404,7 +404,7 @@ class DfPredictor(object):
             if np.array_equal(reslist, self.reslist):
                 pass
             else:
-                raise Functions.HDX_Error("Your residue lists for protection factors and intrinsic rates are different. Check your inputs!")
+                raise HDX_Error("Your residue lists for protection factors and intrinsic rates are different. Check your inputs!")
         except AttributeError:
             print("Please generate protection factors before running intrinsic rate calculations.")
             return
@@ -469,11 +469,11 @@ class DfPredictor(object):
                 curr_pfs = np.stack((np.mean(self.pf_byframe, axis=1), np.std(self.pf_byframe, axis=1, ddof=1)), axis=1) # No lnPF for Persson-Halle etc
                 
             if len(set(map(len,[self.reslist, self.pfs, self.rates]))) != 1: # Check that all lengths are the same (set length = 1)
-                raise Functions.HDX_Error("Can't calculate deuterated fractions, your residue/protection factor/rates arrays are not the same length.")
+                raise HDX_Error("Can't calculate deuterated fractions, your residue/protection factor/rates arrays are not the same length.")
         else:
             curr_pfs = alternate_pfs
             if len(set(map(len,[self.reslist, alternate_pfs, self.rates]))) != 1: # Check that all lengths are the same (set length = 1)
-                raise Functions.HDX_Error("Can't calculate deuterated fractions, your provided residue/protection factor/rates arrays are not the same length.")
+                raise HDX_Error("Can't calculate deuterated fractions, your provided residue/protection factor/rates arrays are not the same length.")
 
         curr_pfs[:,1][np.isinf(curr_pfs[:,1])] = 0
 
