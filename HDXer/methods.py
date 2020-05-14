@@ -4,11 +4,13 @@
 #
 import mdtraj as md
 import numpy as np
-import os, glob, itertools, copy
-import Functions, DfPred
+import os, glob, copy
+from .dfpred import DfPredictor
+from .errors import HDX_Error
+from . import functions
 
 
-class Radou(DfPred.DfPredictor):
+class Radou(DfPredictor):
     """Class for Radou-style analysis. Subclass of DfPredictor.
        Initialises with a dictionary of default parameters for analysis,
        accessible as Radou.params
@@ -64,7 +66,7 @@ class Radou(DfPred.DfPredictor):
                     new.resfracs = new.dfrac(write=False)
                     return new
                 else:
-                    raise Functions.HDX_Error("Cannot sum two method objects with different intrinsic rates.")
+                    raise HDX_Error("Cannot sum two method objects with different intrinsic rates.")
             except AttributeError:
                 return self
         else:
@@ -102,8 +104,8 @@ class Radou(DfPred.DfPredictor):
 
            Options for switching function are defined in Radou.params. Current options:
            'switch_method' [rational_6_12, sigmoid, exponential, gaussian] : form of switching function
-           'switch_scale_Nc' : Scaling of switching function for contacts (default 1.0), see Functions.py for equations
-           'switch_scale_Nh' : Scaling of switching function for Hbonds (default 1.0), see Functions.py for equations
+           'switch_scale_Nc' : Scaling of switching function for contacts (default 1.0), see functions.py for equations
+           'switch_scale_Nh' : Scaling of switching function for Hbonds (default 1.0), see functions.py for equations
            'cut_Nc' : Center of contacts switching
            'cut_Nh' : Center of Hbond switching
            'switch_width' : Width of switching. r > cut_Nc + switch_width, count == 0.0 (not used in this version)
@@ -111,10 +113,10 @@ class Radou(DfPred.DfPredictor):
            Returns count of contacts for each frame in trajectory Radou.t."""
 
         smethods = {
-                    'rational_6_12' : Functions.rational_6_12,
-                    'sigmoid' : Functions.sigmoid,
-                    'exponential' : Functions.exponential,
-                    'gaussian' : Functions.gaussian
+                    'rational_6_12' : functions.rational_6_12,
+                    'sigmoid' : functions.sigmoid,
+                    'exponential' : functions.exponential,
+                    'gaussian' : functions.gaussian
                    }
         do_switch = lambda x: smethods[self.params['switch_method']](x, scale, cutoff)
 
@@ -128,10 +130,10 @@ class Radou(DfPred.DfPredictor):
 
 ### Old, does switching only between a low_cut and a high_cut, not everywhere
 #        smethods = {
-#                    'rational_6_12' : Functions.rational_6_12,
-#                    'sigmoid' : Functions.sigmoid,
-#                    'exponential' : Functions.exponential,
-#                    'gaussian' : Functions.gaussian
+#                    'rational_6_12' : functions.rational_6_12,
+#                    'sigmoid' : functions.sigmoid,
+#                    'exponential' : functions.exponential,
+#                    'gaussian' : functions.gaussian
 #                   }
 #        do_switch = lambda x: smethods[self.params['switch_method']](x, self.params['switch_scale'], self.params['cut_Nc'])
 #
@@ -307,7 +309,7 @@ class Radou(DfPred.DfPredictor):
             robj = self.top.residue(res)
             excl_idxs = range(robj.index - 2, robj.index + 3, 1) # Exclude n-2 to n+2 residues
 
-            inv_atms = Functions.select_residxs(self.t, excl_idxs, protonly=self.params['protonly'], invert=True) # At this stage includes H + heavys
+            inv_atms = functions.select_residxs(self.t, excl_idxs, protonly=self.params['protonly'], invert=True) # At this stage includes H + heavys
             heavys = inv_atms[ np.array( [ is_heavy(i) for i in inv_atms ] ) ] # Filter out non-heavys
 
             if self.params['contact_method'] == 'switch':
@@ -337,8 +339,8 @@ class Radou(DfPred.DfPredictor):
                      array of by-frame protection factors for each residue)"""
 
         # Setup residue/atom lists        
-        hn_atms = Functions.extract_HN(self.t, log=self.params['logfile'])
-        prolines = Functions.list_prolines(self.t, log=self.params['logfile'])
+        hn_atms = functions.extract_HN(self.t, log=self.params['logfile'])
+        prolines = functions.list_prolines(self.t, log=self.params['logfile'])
         # Check all hn_atoms are from protein residues except prolines
         if prolines is not None:
             reslist = [ self.top.atom(a).residue.index for a in hn_atms if self.top.atom(a).residue.is_protein and self.top.atom(a).residue.index not in prolines[:,1] ]
@@ -350,7 +352,7 @@ class Radou(DfPred.DfPredictor):
         cres, contacts = self.calc_nh_contacts(reslist)
 
         if not np.array_equal(hres, cres):
-            raise Functions.HDX_Error("The residues analysed for Nc and Nh appear to be different. Check your inputs!")
+            raise HDX_Error("The residues analysed for Nc and Nh appear to be different. Check your inputs!")
 
         # Option to save outputs
         if self.params['contact_method'] == 'switch':
@@ -399,7 +401,7 @@ class Radou(DfPred.DfPredictor):
 
         return hres, pf_bar, pf_byframe, lnpf_bar, lnpf_byframe
 
-    @Functions.cacheobj()
+    @functions.cacheobj()
     def run(self, trajectory):
         """Runs a by-residue HDX prediction for the provided MDTraj trajectory
 
@@ -421,7 +423,7 @@ class Radou(DfPred.DfPredictor):
 
 ### Add further classes for methods below here
 
-class PH(DfPred.DfPredictor):
+class PH(DfPredictor):
     """Class for Persson-Halle style analysis. PNAS, 2015, 112(33), 10383-10388.
        Subclass of DfPredictor. Initialises with a dictionary of default
        parameters for analysis, accessible as PH.params
@@ -463,7 +465,7 @@ class PH(DfPred.DfPredictor):
                     new.resfracs = new.dfrac(write=False)
                     return new
                 else:
-                    raise Functions.HDX_Error("Cannot sum two method objects with different intrinsic rates.")
+                    raise HDX_Error("Cannot sum two method objects with different intrinsic rates.")
             except AttributeError:
                 return self
         else:
@@ -521,10 +523,10 @@ class PH(DfPred.DfPredictor):
            using a switching function with parameters defined in the PH.params dictionary"""
 
         smethods = {
-                    'rational_6_12' : Functions.rational_6_12,
-                    'sigmoid' : Functions.sigmoid,
-                    'exponential' : Functions.exponential,
-                    'gaussian' : Functions.gaussian
+                    'rational_6_12' : functions.rational_6_12,
+                    'sigmoid' : functions.sigmoid,
+                    'exponential' : functions.exponential,
+                    'gaussian' : functions.gaussian
                    }
         do_switch = lambda x: smethods[self.params['switch_method']](x, self.params['switch_scale'], self.params['cut_O'])
 
@@ -563,8 +565,8 @@ class PH(DfPred.DfPredictor):
 
 
         if not update_only:
-            hn_atms = Functions.extract_HN(self.t, log=self.params['logfile'])
-            prolines = Functions.list_prolines(self.t, log=self.params['logfile'])
+            hn_atms = functions.extract_HN(self.t, log=self.params['logfile'])
+            prolines = functions.list_prolines(self.t, log=self.params['logfile'])
             # Check all hn_atoms are from protein residues except prolines
             if prolines is not None:
                 protlist = np.asarray([ self.top.atom(a).residue.index for a in hn_atms if self.top.atom(a).residue.is_protein and self.top.atom(a).residue.index not in prolines[:,1] ])
@@ -574,10 +576,10 @@ class PH(DfPred.DfPredictor):
             self.reslist, self.watcontacts = self.calc_wat_contacts(hn_atms)
             if self.params['skip_first']:
                 if not np.array_equal(protlist[1:], self.reslist):
-                    raise Functions.HDX_Error("One or more residues analysed for water contacts is either proline or a non-protein residue. Check your inputs!")
+                    raise HDX_Error("One or more residues analysed for water contacts is either proline or a non-protein residue. Check your inputs!")
             else:
                 if not np.array_equal(protlist, self.reslist):
-                    raise Functions.HDX_Error("One or more residues analysed for water contacts is either proline or a non-protein residue. Check your inputs!")
+                    raise HDX_Error("One or more residues analysed for water contacts is either proline or a non-protein residue. Check your inputs!")
 
         # Update/calculation of PF
         opencount, closedcount = np.sum(self.watcontacts >= 2, axis=1), np.sum(self.watcontacts < 2, axis=1)
@@ -588,7 +590,7 @@ class PH(DfPred.DfPredictor):
             self.pf_byframe = np.repeat(np.atleast_2d(self.pfs).T, self.n_frames, axis=1)
         self.pfs = np.stack((self.pfs, np.zeros(len(self.watcontacts))), axis=1)
         
-    @Functions.cacheobj()
+    @functions.cacheobj()
     def run(self, trajectory):
         """Runs a by-residue HDX prediction for the provided MDTraj trajectory
 

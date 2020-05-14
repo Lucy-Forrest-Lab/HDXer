@@ -13,9 +13,10 @@ import sys
 from functools import reduce
 
 # HDXer modules
-import Analysis
-import Functions
-import Methods
+import HDXer.methods, HDXer.functions
+from HDXer.errors import HDX_Error
+from HDXer.analysis import Analyze, Plots
+
 
 
 ### Argparser ###
@@ -73,11 +74,11 @@ def parse():
             if isinstance(optdict, dict):
                 args.method_options = optdict
             else:
-                raise Functions.HDX_Error("Your options flag isn't a dictionary. Dictionary format with key/value "
-                                          "pairs is required")
+                raise HDX_Error("Your options flag isn't a dictionary. Dictionary format with key/value "
+                                "pairs is required")
         except ValueError:
-            raise Functions.HDX_Error("There's something wrong with the syntax of your options flag. Check it's "
-                                      "formatted like a Python dictionary")
+            raise HDX_Error("There's something wrong with the syntax of your options flag. Check it's "
+                            "formatted like a Python dictionary")
     return args
 
 
@@ -85,8 +86,8 @@ def parse():
 def _get_method(name):
     """Choose a method to run based on a string"""
     # Switch for methods (add new ones here):
-    methods = { 'radou' : Methods.Radou,
-                'perssonhalle' : Methods.PH }
+    methods = { 'radou' : HDXer.methods.Radou,
+                'perssonhalle' : HDXer.methods.PH }
 
     return methods[name.lower()]
 
@@ -99,7 +100,7 @@ def _update_options(opts, **updates):
 def predict(traj, method, mopts, aopts, saveprefix=None):
     """Predicts fraction of deuterium exchange for residues in the given
        trajectory, using the given method and dictionary of options, and
-       creates a suitable Analysis.Analyze object to store these results.
+       creates a suitable HDXer.analysis.Analyze object to store these results.
  
        Usage: predict(traj, method, method_options, analysis_options)
        Returns: (Object of desired method class with completed HDX predictions,
@@ -114,7 +115,7 @@ def predict(traj, method, mopts, aopts, saveprefix=None):
             predict.calls += 1
     m_obj = _get_method(method)(**mopts)
     m_obj = m_obj.run(traj, cachefn=cachefn)
-    a_obj = Analysis.Analyze(m_obj, m_obj.top, **aopts)
+    a_obj = Analyze(m_obj, m_obj.top, **aopts)
     return m_obj, a_obj
 
 
@@ -145,8 +146,8 @@ def full(trajlist, parm, start, stop, stride, select, method, mopts, aopts, save
                  Analyze object with completed HDX results)"""
 
     predict.calls = 1
-    t = Functions.load_fulltraj(trajlist, parm=parm, start=start, stop=stop, stride=stride)
-    tslice = Functions.select(t, select)
+    t = HDXer.functions.load_fulltraj(trajlist, parm=parm, start=start, stop=stop, stride=stride)
+    tslice = HDXer.functions.select(t, select)
     summed_results, summed_analysis = predict(tslice, method, mopts, aopts, saveprefix)
     return summed_results, summed_analysis
 
@@ -162,15 +163,15 @@ def chunks(trajlist, parm, start, stop, stride, select, chunksize, method, mopts
     fulllist = []
     for t in trajlist:
         if stop is None:
-            final_frame = sum(_.n_frames*stride for _ in Functions.load_trajchunks(t, parm=parm, stride=stride, chunk=chunksize))
+            final_frame = sum(_.n_frames*stride for _ in HDXer.functions.load_trajchunks(t, parm=parm, stride=stride, chunk=chunksize))
         else:
             final_frame = stop
-        t_gen = Functions.load_trajchunks(t, parm=parm, start=start, stride=stride, chunk=chunksize)
+        t_gen = HDXer.functions.load_trajchunks(t, parm=parm, start=start, stride=stride, chunk=chunksize)
         f_to_yield = final_frame - (start - 1)
         # Sums generator with __add__ of desired method
         fulllist.append(reduce(combine_results,
-                               (predict(Functions.select(t_chunk, select), method, mopts, aopts, saveprefix) for t_chunk in \
-                               Functions.itertraj_slice(t_gen, chunksize, f_to_yield, stride=stride))))
+                               (predict(HDXer.functions.select(t_chunk, select), method, mopts, aopts, saveprefix) for t_chunk in \
+                               HDXer.functions.itertraj_slice(t_gen, chunksize, f_to_yield, stride=stride))))
     
     resultlist = [ tup[0] for tup in fulllist ]
     analysislist = [ tup[1] for tup in fulllist ]
@@ -220,21 +221,21 @@ if __name__ == '__main__':
         # These require analysis/plotting over the sum total of ALL chunks
         if args.method in ['PerssonHalle']:
             try:
-                summed_analysis = Analysis.Analyze(results, results.top, **args.analysis_options) 
+                summed_analysis = Analyze(results, results.top, **args.analysis_options) 
             except AttributeError: # 'results' obj may not have topology if it's been deleted for pickling
                 results.__setstate__(results.__dict__) # Loads topology.pkl if found
-                summed_analysis = Analysis.Analyze(results, results.top, **args.analysis_options) 
+                summed_analysis = Analyze(results, results.top, **args.analysis_options) 
             summed_analysis = summed_analysis.run(cachefn='analysis.pkl')
             summed_analysis.print_summaries()
-            summed_plots = Analysis.Plots(summed_analysis)
+            summed_plots = Plots(summed_analysis)
             summed_plots.run()
         else:
             analysis = analysis.run(cachefn='analysis.pkl')
             analysis.print_summaries()
-            plots = Analysis.Plots(analysis)
+            plots = Plots(analysis)
             plots.run()
     else:
         analysis = analysis.run(cachefn='analysis.pkl')
         analysis.print_summaries()
-        plots = Analysis.Plots(analysis)
+        plots = Plots(analysis)
         plots.run()

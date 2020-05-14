@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # Transferable functions for HDX analysis
 
 #
@@ -7,10 +5,6 @@ import mdtraj as md
 import numpy as np
 import pickle
 
-
-# Exception for HDX
-class HDX_Error(Exception):
-    """Exception in HDX module"""
 
 # Functions
 def load_fulltraj(traj, parm, start=1, stop=None, stride=1, standard_names=True, **kwargs):

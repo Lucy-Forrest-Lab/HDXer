@@ -6,7 +6,7 @@ from glob import glob
 from copy import deepcopy
 import pickle
 
-from Functions import HDX_Error
+from .errors import HDX_Error
 
 
 class MaxEnt():

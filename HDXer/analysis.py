@@ -1,28 +1,16 @@
-#!/usr/bin/env python
-
 # Analysis/plotting functions for HDX analysis
 
-import Functions, Methods
 import numpy as np
 import matplotlib.pyplot as plt
-import os, glob, copy, itertools, pickle
+import os, glob, copy, pickle
+from .errors import HDX_Error
+from . import functions, methods
 from scipy.stats import pearsonr as correl
 from scipy.stats import sem as stderr
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.ticker import MultipleLocator, MaxNLocator
 from cycler import cycler
 
-
-### Define defaults for matplotlib plots
-plt.rc('lines', linewidth=1.5, markersize=4)
-plt.rc('axes', prop_cycle=(cycler('color', ['k','b','r','orange','c','m','y','g'])), # Color cycle defaults to black
-       labelweight='heavy', labelsize=14, titlesize=18) # Default fontsizes for printing
-plt.rc('axes.spines', top=False, right=False) # Switch off top/right axes
-plt.rc('legend', fontsize=10) # Default fontsizes for printing
-plt.rc('xtick', labelsize=12) # Default fontsizes for printing
-plt.rc('ytick', labelsize=12) # Default fontsizes for printing
-plt.rc('figure', titlesize=22, titleweight='heavy') # Default fontsizes for printing
-#plt.rc('text', usetex=True)
 
 ### Classes
 class Analyze():
@@ -56,7 +44,7 @@ class Analyze():
             self.top = top
             self.resnums = np.asarray([ self.top.residue(i).resSeq for i in self.residxs ])
         except AttributeError:
-            raise Functions.HDX_Error("Error when copying results from prediction to analysis objects - have you made any HDX predictions yet?")
+            raise HDX_Error("Error when copying results from prediction to analysis objects - have you made any HDX predictions yet?")
         self.params = resobj.params
         try:
             self.params.update(extra_params)
@@ -119,7 +107,7 @@ class Analyze():
                 return new
  
 #            except AttributeError:
-#                raise Functions.HDX_Error("Error when adding analysis objects - have you made any HDX predictions yet?")
+#                raise HDX_Error("Error when adding analysis objects - have you made any HDX predictions yet?")
         else:
             return self
 
@@ -148,9 +136,9 @@ class Analyze():
             try:
                 self.resobj.top = pickle.load(open(self.params['outprefix']+"topology.pkl", 'rb'))
             except (IOError, EOFError):
-                raise Functions.HDX_Error("Can't read cached topology file %s. "\
-                                          "Re-run calculation after removing the file." \
-                                           % (self.params['outprefix']+"topology.pkl"))
+                raise HDX_Error("Can't read cached topology file %s. "\
+                                "Re-run calculation after removing the file." \
+                                % (self.params['outprefix']+"topology.pkl"))
         else:
             self.resobj.top = self.top
 
@@ -172,7 +160,7 @@ class Analyze():
            
            Usage: _cumulative_average(data, blocksizes)"""
         if not len(data) == np.sum(blocksizes):
-            raise Functions.HDX_Error("Unable to cumulatively average data of length %d using total blocksizes %d" \
+            raise HDX_Error("Unable to cumulatively average data of length %d using total blocksizes %d" \
                                       % (len(data), int(np.sum(blocksizes))))
         aves = np.zeros(len(blocksizes))
         blocksum = np.cumsum(blocksizes)
@@ -198,9 +186,9 @@ class Analyze():
             self.segres['segres'] = tmp_segres            
             self._single_chain = True
         except ValueError:
-            raise Functions.HDX_Error("There's a problem reading the values in your segments file: %s \n"
-                                      "File should contain either 2 or 3 columns of integers, separated by spaces.\n"
-                                      "Format: start_residue end_residue chain_index[optional]")
+            raise HDX_Error("There's a problem reading the values in your segments file: %s \n"
+                            "File should contain either 2 or 3 columns of integers, separated by spaces.\n"
+                            "Format: start_residue end_residue chain_index[optional]")
 
 
     def read_expfile(self):
@@ -220,9 +208,9 @@ class Analyze():
                 expt = np.loadtxt(self.params['expfile'], dtype=[ ('segres', np.int32, (2,)),
                                   ('chain', np.int32, (1)), ('fracs', np.float64, (len(self.params['times']),)) ])
         except ValueError as err:
-            raise Functions.HDX_Error("There's a problem with the experimental data file. It has too few timepoints. \n" \
-                                      "This can be caused if you've defined chain indices in the segments file but not in the experimental data file.\n" \
-                                      "The error while reading was: %s" % str(err))
+            raise HDX_Error("There's a problem with the experimental data file. It has too few timepoints. \n" \
+                            "This can be caused if you've defined chain indices in the segments file but not in the experimental data file.\n" \
+                            "The error while reading was: %s" % str(err))
         # Now check I'm not loading in too few timepoints
         try:
             if self._single_chain:
@@ -231,8 +219,8 @@ class Analyze():
             else:
                 expt = np.loadtxt(self.params['expfile'], dtype=[ ('segres', np.int32, (2,)),
                                   ('chain', np.int32, (1)), ('fracs', np.float64, (len(self.params['times']) + 1,)) ])
-            raise Functions.HDX_Error("There's a problem with the experimental data file. It has too many timepoints. \n" 
-                                      "This can be caused if you've defined chain indices in the experimental data file but not in the segments file.\n")
+            raise HDX_Error("There's a problem with the experimental data file. It has too many timepoints. \n" 
+                            "This can be caused if you've defined chain indices in the experimental data file but not in the segments file.\n")
         except ValueError:
             pass
         # Check expt = predicted
@@ -240,12 +228,12 @@ class Analyze():
             if np.array_equal(self.segres['segres'], expt['segres']):
                 self.expfracs = expt['fracs']
             else:
-                raise Functions.HDX_Error("The experimental segments read from %s and predicted segments read from %s don't match!" % (self.params['segfile'], self.params['expfile']))
+                raise HDX_Error("The experimental segments read from %s and predicted segments read from %s don't match!" % (self.params['segfile'], self.params['expfile']))
         else:                               
             if all( (np.array_equal(self.segres['segres'], expt['segres']), np.array_equal(self.segres['chain'], expt['chain'])) ):
                 self.expfracs = expt['fracs']
             else:
-                raise Functions.HDX_Error("The experimental segments/chains read from %s and predicted segments/chains read from %s don't match!" % (self.params['segfile'], self.params['expfile']))
+                raise HDX_Error("The experimental segments/chains read from %s and predicted segments/chains read from %s don't match!" % (self.params['segfile'], self.params['expfile']))
     
     def segments(self, top):
         """Function to average residue deuterated fractions over
@@ -507,7 +495,7 @@ class Analyze():
                 np.savetxt(self.params['outprefix']+"SUMMARY_protection_factors.dat", np.stack((self.resnums, self.c_pfs[-1]), axis=1),
                            fmt=['%7d','%18.8f'], header="ResID  Protection factor") # Use residue indices internally, print out IDs
         except AttributeError:
-            raise Functions.HDX_Error("Can't write summary protection factors - perhaps you haven't calculated them yet?")
+            raise HDX_Error("Can't write summary protection factors - perhaps you haven't calculated them yet?")
 
         # Save log(PFs) to 'SUMMARY' file
         try:
@@ -521,7 +509,7 @@ class Analyze():
                            fmt=['%7d','%18.8f'], header="ResID  ln(Protection factor)") # Use residue indices internally, print out IDs
         except AttributeError:
             if type(self.resobj) is Methods.Radou:
-                raise Functions.HDX_Error("Can't write summary log protection factors - perhaps you haven't calculated them yet?")
+                raise HDX_Error("Can't write summary log protection factors - perhaps you haven't calculated them yet?")
             else:
                 pass
 
@@ -541,7 +529,7 @@ class Analyze():
                            header="ResID  Deuterated fraction, Times / min: %s" \
                            % ' '.join([ str(t) for t in self.params['times'] ])) # Use residue indices internally, print out IDs
         except AttributeError:
-            raise Functions.HDX_Error("Can't write summary residue fractions - perhaps you haven't calculated them yet?")
+            raise HDX_Error("Can't write summary residue fractions - perhaps you haven't calculated them yet?")
 
 
         # Save segment deuterated averages to 'SUMMARY' file
@@ -573,10 +561,10 @@ class Analyze():
                 
 
         except AttributeError:
-            raise Functions.HDX_Error("Can't write summary segment fractions - perhaps they haven't been calculated yet?")
+            raise HDX_Error("Can't write summary segment fractions - perhaps they haven't been calculated yet?")
         
     
-    @Functions.cacheobj()    
+    @functions.cacheobj()    
     def run(self):
         """Run a by-segment HDX prediction and optionally compares to experiment"""
 
@@ -618,8 +606,19 @@ class Plots():
         if isinstance(aobj, Analyze):
             self.results = aobj
         else:
-            raise Functions.HDX_Error("Can't initialize a Plots object from anything"\
-                                      "other than a completed Analyze object.")
+            raise HDX_Error("Can't initialize a Plots object from anything"\
+                            "other than a completed Analyze object.")
+
+        ### Define defaults for matplotlib plots
+        plt.rc('lines', linewidth=1.5, markersize=4)
+        plt.rc('axes', prop_cycle=(cycler('color', ['k','b','r','orange','c','m','y','g'])), # Color cycle defaults to black
+               labelweight='heavy', labelsize=14, titlesize=18) # Default fontsizes for printing
+        plt.rc('axes.spines', top=False, right=False) # Switch off top/right axes
+        plt.rc('legend', fontsize=10) # Default fontsizes for printing
+        plt.rc('xtick', labelsize=12) 
+        plt.rc('ytick', labelsize=12) 
+        plt.rc('figure', titlesize=22, titleweight='heavy') 
+        #plt.rc('text', usetex=True)
 
     def choose_plots(self, **override_opts):
         """Choose available plots based on results in Analyze object.
@@ -1139,10 +1138,10 @@ class Plots():
            
            Plots are saved to a multi-page PDF file switching_function.pdf""" 
         smethods = {
-                    'rational_6_12' : Functions.rational_6_12,
-                    'sigmoid' : Functions.sigmoid,
-                    'exponential' : Functions.exponential,
-                    'gaussian' : Functions.gaussian
+                    'rational_6_12' : functions.rational_6_12,
+                    'sigmoid' : functions.sigmoid,
+                    'exponential' : functions.exponential,
+                    'gaussian' : functions.gaussian
                    }
 
 

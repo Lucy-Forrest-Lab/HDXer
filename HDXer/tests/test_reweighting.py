@@ -3,7 +3,7 @@ Unit and regression test for the HDXer package.
 """
 
 # Import package, test suite, and other packages as needed
-from HDXer import Reweighting
+from HDXer import reweighting
 import numpy as np
 import pytest
 import sys, os
@@ -38,7 +38,7 @@ def test_reweight_initialize():
                       'test_param' : 'foo'
                          }
 
-    test_obj = Reweighting.MaxEnt(**test_dict)
+    test_obj = reweighting.MaxEnt(**test_dict)
     assert test_obj.methodparams == expected_dict
 
 def test_reweight_data_io_1():
@@ -76,9 +76,9 @@ def test_reweight_data_io_1():
     
 
 
-    test_folders = [ 'tests/data/reweighting_1' ]
-    test_kint_file = os.path.join('tests/data/reweighting_1', 'intrinsic_rates.dat')
-    test_exp_file = os.path.join('tests/data/reweighting_1', 'experimental_data.dat')
+    test_folders = [ 'HDXer/tests/data/reweighting_1' ]
+    test_kint_file = os.path.join('HDXer/tests/data/reweighting_1', 'intrinsic_rates.dat')
+    test_exp_file = os.path.join('HDXer/tests/data/reweighting_1', 'experimental_data.dat')
     test_contacts_prefix = 'Contacts_chain_0_res_'
     test_hbonds_prefix = 'Hbonds_chain_0_res_'
     test_param_dict = { 'hbonds_prefix' : test_hbonds_prefix,
@@ -89,7 +89,7 @@ def test_reweight_data_io_1():
                         'times' : test_times }
 
 
-    test_obj = Reweighting.MaxEnt()
+    test_obj = reweighting.MaxEnt()
     test_obj.set_run_params(10**-2, None, None, test_param_dict)
     test_obj.setup_no_runobj(test_obj.runparams['data_folders'],
                              test_obj.runparams['kint_file'],
