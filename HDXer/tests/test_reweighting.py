@@ -43,7 +43,8 @@ def test_reweight_initialize():
 
 def test_reweight_data_io_1():
     """Test that runparams are assigned correctly and
-       data files are read in correctly"""
+       data files are read in correctly.
+       Test 1 checks contacts & H-bond inputs"""
 
     expected_nframes = 10
     expected_hbonds = np.array([ 
@@ -100,4 +101,10 @@ def test_reweight_data_io_1():
     assert np.array_equal(test_obj.runvalues['contacts'], expected_contacts)
     assert np.array_equal(test_obj.runvalues['hbonds'], expected_hbonds)
     assert test_obj.runvalues['nframes'] == expected_nframes
+    # Broadcast expected_minuskt to 3 dims for segments * residues * times 
+    assert np.array_equal(test_obj.runvalues['minuskt'], np.repeat(expected_minuskt[np.newaxis,:,:], len(expected_expt), axis=0) )
+    # Internally the exp_dfrac_filtered arrays have 0 for residues not in the segment.
+    # So, test for closeness, not identity
+    test_expt_normalised = np.sum(test_obj.runvalues['exp_dfrac_filtered'], axis=1) / np.sum(test_obj.runvalues['segfilters'], axis=1)
+    assert np.allclose(test_expt_normalised, expected_expt)
 

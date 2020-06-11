@@ -7,7 +7,7 @@ from copy import deepcopy
 import pickle
 
 from .errors import HDX_Error
-
+from .reweighting_functions import read_contacts_hbonds, read_kints_segments
 
 class MaxEnt():
     """Class for Maximum Entropy reweighting of a predicted
@@ -43,6 +43,7 @@ class MaxEnt():
                param_stepfactor (10**-1) Initial rate (affects model parameter step size) for MC parameter optimisation
                temp (300.) : Temperature for HDX predictions in Kelvin
                random_initial (False) : Randomize the initial frame weights. Otherwise, all frames will initially be weighted equally"""
+
         maxentparams = { 'do_reweight' : True,
                          'do_params' : True,
                          'do_mcmin' : False,
@@ -66,132 +67,6 @@ class MaxEnt():
         maxentparams.update(kT = maxentparams['temp'] * 0.008314598)
         self.methodparams = maxentparams
 
-    ### 1) Functions for reading in files & run setup ###
-    ### In the absence of a runobj file, the residue and chain IDs will be read
-    ### from the provided topology
-
-    # Sorting key for contacts/Hbonds files
-    def strip_filename(self, fn, prefix):
-        """Sorting key that will strip the integer residue number
-           from a Contacts/Hbonds filename. Expects filenames of 
-           the sort 'Contacts_123.tmp' - splits on _ and . 
-    
-           If filenames are not quite of this format, optionally
-           the 'extrastr' argument can be used to add an additional
-           string to the filename, e.g. 'Contacts_chain_0_res_123.tmp'"""
-        try:
-            _ = fn.split(prefix)[1]
-            return int(_.split(".")[0])
-        except:
-            raise NameError("Unable to read residue number from Contacts/Hbonds file: %s" % fn)
-
-    # Read in single column datafiles
-    def files_to_array(self, fnames):
-        """Read in data fom list of files with np.loadtxt.
-           Returns array of shape (n_files, n_data_per_file)"""
-        l = [ np.loadtxt(f) for f in fnames ]
-        try:
-            return np.stack(l, axis=0)
-        except ValueError:
-            raise ValueError("Error in stacking files read with np.loadtxt - are they all the same length?")
-
-    # Read in initial contacts & H-bonds.
-    # Store as 2D-np arrays of shape (n_residues, n_frames)
-
-    # Treat separate chains as separate frames. Can be upweighted/downweighted individually
-    # (Only applicable if we add extra lines here to read in the extra Contacts/Hbonds files for each chain)
-    def read_contacts_hbonds(self, folderlist):
-        """Read in contact & hbond files from defined folders & return as numpy arrays,
-           along with the resids they correspond to.
-
-           Usage: read_contacts_hbonds(folderlist)
-
-           Returns: contacts[n_residues, n_frames], hbonds[n_residues, n_frames], sorted_resids"""
-
-        contactfiles, hbondfiles = [],[]
-        for folder in folderlist:
-            contactfiles.append(sorted(glob(os.path.join(folder, self.runparams['contacts_prefix'] + "*.tmp")),
-                                       key=lambda x: self.strip_filename(x, prefix=self.runparams['contacts_prefix'])))
-            hbondfiles.append(sorted(glob(os.path.join(folder, self.runparams['hbonds_prefix'] + "*.tmp")), 
-                                     key=lambda x: self.strip_filename(x, prefix=self.runparams['hbonds_prefix'])))
-
-        resids = []
-        # This is a list comprehension with the try/except for the extra strings
-        for curr in contactfiles:
-            _ = []
-            for f in curr:
-                try:
-                    _.append( self.strip_filename(f, prefix=self.runparams['contacts_prefix']) )
-                except NameError:
-                    _.append( self.strip_filename(f, prefix=self.runparams['contacts_prefix']) ) # E.g. for 2 chain system
-            resids.append(_)
-
-        sorted_resids = deepcopy(resids)
-        sorted_resids.sort(key=lambda _: len(_))
-        filters = list(map(lambda _: np.in1d(_, sorted_resids[0]), resids)) # Get indices to filter by shortest
-        new_resids = []
-        for r, f in list(zip(resids, filters)):
-            new_resids.append(np.array(r)[f])
-        new_resids = np.stack(new_resids)
-        if not np.diff(new_resids, axis=0).sum(): # If sum of differences between filtered resids == 0
-            pass
-        else:
-            raise ValueError("Error in filtering trajectories to common residues - do residue IDs match up in your intrinsic rate files?")
-
-        _contacts = list(map(lambda x, y: x[y], [ self.files_to_array(curr_cfiles) for curr_cfiles in contactfiles ], filters))
-        _hbonds = list(map(lambda x, y: x[y], [ self.files_to_array(curr_hfiles) for curr_hfiles in hbondfiles ], filters))
-
-
-        contacts = np.concatenate(_contacts, axis=1)
-        print("Contacts read")
-        hbonds = np.concatenate(_hbonds, axis=1)
-        print("Hbonds read")
-        assert (contacts.shape == hbonds.shape)
-        return contacts, hbonds, sorted_resids
-
-
-
-    # Read intrinsic rates, multiply by times
-    def read_kints_segments(self, kintfile, expt_path, n_res, times, sorted_resids):
-        """Read in intrinsic rates, segments, and expt deuterated fractions.
-           All will be reshaped into 3D arrays of [n_segments, n_residues, n_times]
-
-           Requires number of residues, times, and a list of residue IDs
-           for which contacts/H-bonds have been read  in
-
-           Usage: read_kints_segments(kintfile, expt_path, n_res, times, sorted_resids)
-
-           Returns: kint, expt_dfrac, segfilters (all of shape [n_segments, n_residues, n_times])"""
-
-        kint = np.loadtxt(kintfile, usecols=(1,)) # We only need one file here and it'll be filtered based on its residue IDs
-        kintresid = np.loadtxt(kintfile, usecols=(0,))
-        kintfilter = np.in1d(kintresid, sorted_resids[0])
-        kint = kint[kintfilter]
-        final_resid = kintresid[kintfilter]
-        kint = np.repeat(kint[:, np.newaxis], len(times), axis=1)*times # Make sure len(times) is no. of expt times
-        # Read deuterated fractions, shape will be (n_residues, n_times)
-        exp_dfrac = np.loadtxt(expt_path, usecols=tuple(range(2,2+len(times))))
-        segments = np.loadtxt(expt_path, usecols=(0,1), dtype=np.int32)
-
-        # convert expt to (segments, residues, times)
-        exp_dfrac = exp_dfrac[:,np.newaxis,:].repeat(n_res, axis=1)
-        # convert kint to (segments, residues, times)
-        kint = kint[np.newaxis,:,:].repeat(len(segments), axis=0)
-
-        # Make a set of filters that defines the residues in each segment & timepoint
-        segfilters=[]
-        for seg in segments:
-            seg_resids = range(seg[0], seg[1]+1)
-            segfilters.append(np.in1d(final_resid, seg_resids[1:])) # Filter but skipping first residue in segment
-        segfilters = np.array(segfilters)
-        segfilters = np.repeat(segfilters[:, :, np.newaxis], len(times), axis=2) # Repeat to shape (n_segments, n_residues, n_times)
-
-        assert all((segfilters.shape == exp_dfrac.shape, \
-                   segfilters.shape == kint.shape, \
-                   n_res == len(final_resid))) # Check we've at least read in the right number!
-
-        print("Segments and experimental dfracs read")
-        return kint, exp_dfrac, segfilters
 
 
     # Setup functions
@@ -214,9 +89,11 @@ class MaxEnt():
                          'lambdamod' : None,
                          'deltalambdamod' : None,
                          'curriter' : None }
-        _contacts, _hbonds, _sorted_resids = self.read_contacts_hbonds(folderlist)
+        _contacts, _hbonds, _sorted_resids = read_contacts_hbonds(folderlist, 
+                                                                  self.runparams['contacts_prefix'], 
+                                                                  self.runparams['hbonds_prefix'])
         _nresidues = len(_hbonds)
-        _kint, _exp_dfrac, _segfilters = self.read_kints_segments(kint_file, expt_file_path, _nresidues, times, _sorted_resids)
+        _minuskt, _exp_dfrac, _segfilters = read_kints_segments(kint_file, expt_file_path, _nresidues, times, _sorted_resids)
 
         # Starting lambda values
         _lambdas = np.zeros(_nresidues)
@@ -271,7 +148,7 @@ class MaxEnt():
             f.write("# Iteration, avehdxdev, chisquare, lambdamod, deltalambdamod, rate, Bh, Bc, work \n")
 
         # Set some constants & initial values for the iteration loop
-        _minuskt_filtered = -_kint * _segfilters
+        _minuskt_filtered = -_minuskt * _segfilters
         _exp_dfrac_filtered = _exp_dfrac * _segfilters
         _ndatapoints = np.sum(_segfilters)
         _nsegs = _segfilters.shape[0]
@@ -281,7 +158,7 @@ class MaxEnt():
 
         maxentvalues.update(contacts = _contacts,
                             hbonds = _hbonds,
-                            kint = _kint,
+                            minuskt = _minuskt,
                             exp_dfrac = _exp_dfrac,
                             segfilters = _segfilters,
                             lambdas = _lambdas,
@@ -356,6 +233,23 @@ class MaxEnt():
             self.runparams['out_prefix']
         except KeyError:
             self.runparams['out_prefix'] = 'reweighting_'
+
+    def update_lnpi_and_weights(self):
+        _contacts = self.methodparams['radou_bc'] * self.runvalues['contacts']
+        _hbonds = self.methodparams['radou_bh'] * self.runvalues['hbonds']
+        self.runvalues['lnpi'] = _hbonds + _contacts
+
+        if self.methodparams['do_mcsampl']:
+            biasfactor = np.sum(self.mcsamplvalues['lambdas_c'][:, np.newaxis] * self.runvalues['contacts']
+                                + self.mcsamplvalues['lambdas_h'][:, np.newaxis] * self.runvalues['hbonds'],
+                                axis=0)  # Sum over all residues, = array of len(nframes). lambdas is 1D array broadcast to 2D
+        else:
+            biasfactor = np.sum(self.runvalues['lambdas'][:, np.newaxis] * self.runvalues['lnpi'],
+                                axis=0)  # Sum over all residues, = array of len(nframes). lambdas is 1D array broadcast to 2D
+
+        self.runvalues['currweights'] = self.runvalues['iniweights'] * np.exp(biasfactor)
+        self.runvalues['currweights'] = self.runvalues['currweights'] / np.sum(self.runvalues['currweights'])
+        self.runvalues['ave_lnpi'] = np.sum(self.runvalues['currweights'] * self.runvalues['lnpi'], axis=1)
 
 
     def run(self, gamma=10**-2, runobj=None, restart=None, **run_params):
