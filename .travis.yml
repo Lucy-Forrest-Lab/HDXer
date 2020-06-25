@@ -47,5 +47,9 @@ script:
 notifications:
     email: false
 
+env:
+  # Environment variable for uploading reports from private repo to my codecov account
+  - CODECOV_TOKEN="096bc759-49e4-4db9-9077-bed3e4743c5a"
+
 after_success:
   - codecov
