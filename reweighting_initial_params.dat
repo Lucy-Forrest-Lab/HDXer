@@ -1,2 +1,2 @@
 Temp, kT, convergence tolerance, BetaC, BetaH, gamma, update rate (step size) factor, nframes
-300.0,  2.494, 1.00e-10,  0.35,  2.00, 1.00e-02, 0.000010, 10
+300.0,  2.494, 1.00e-10,  0.25,  5.25, 1.00e-02, 0.000010, 10
