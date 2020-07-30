@@ -104,12 +104,16 @@ class MaxEnt():
             mcsamplvalues = {'final_MClambdas': np.zeros(_nresidues),
                              'final_MClambdas_h': np.zeros(_nresidues),
                              'final_MClambdas_c': np.zeros(_nresidues),
+                             'gamma_MClambdas_h': np.zeros(_nresidues),
+                             'gamma_MClambdas_c': np.zeros(_nresidues),
+                             'gamma_MClambdas': np.zeros(_nresidues),
                              'ave_MClambdas_h': np.zeros(_nresidues),
                              'ave_MClambdas_c': np.zeros(_nresidues),
                              'lambdas_c': np.zeros(_nresidues),
                              'lambdas_h': np.zeros(_nresidues),
                              'MC_MSE_ave': 0.,
-                             'MC_resfracs_ave': 0.}
+                             'MC_resfracs_ave': 0.,
+                             'smoothing_rate': 1.0}
             self.mcsamplvalues.update(mcsamplvalues)
 
         # Write initial parameter values
@@ -401,11 +405,11 @@ class MaxEnt():
         ### Start of sampling code
         # First, determine if we want to do some equilibration steps, and set the smoothing applied to the step size during equilibration
         if self.methodparams['mc_equilsteps'] > 0:
-            smoothing_rate = self.methodparams['mc_equilsteps'] \
-                             / np.sqrt(self.methodparams['mc_equilsteps']
-                             * (self.methodparams['mc_equilsteps'] + self.runvalues['curriter']))
+            self.mcsamplvalues['smoothing_rate'] = self.methodparams['mc_equilsteps'] \
+                                 / np.sqrt(self.methodparams['mc_equilsteps']
+                                 * (self.methodparams['mc_equilsteps'] + self.runvalues['curriter']))
         else:
-            smoothing_rate = 1.0
+            self.mcsamplvalues['smoothing_rate'] = 1.0
 
         # Get the weighted-average contacts & H-bonds for each residue
         _ave_contacts = np.sum(self.runvalues['currweights'] * self.runvalues['contacts'], axis=1)
@@ -448,7 +452,7 @@ class MaxEnt():
                     self.runvalues['curr_residue_dfracs'] = trial_residue_dfracs
 
             if self.methodparams['do_reweight']:
-                curr_lambdas = calc_lambdas_in_sampleloop(self.runvalues['ave_lnpi'], self.runvalues['curr_segment_dfracs'])
+                curr_lambdas = self.calc_lambdas()
                 if curr_mc_iter == 0:
                     add_to_totals = update_sampled_totals(0, 0, 0, 0, 0, 0)
                 else:
@@ -470,37 +474,82 @@ class MaxEnt():
 
 
         # Finally, update the main dictionaries with averages of Bh, Bc, MSE, lambda etc, applying a scaling factor for the initial equilibration period if desired
-        self.methodparams['radou_bh'] = self.methodparams['radou_bh'] * (1.0 - smoothing_rate) + \
-                                        smoothing_rate * (radou_bh_ave / self.methodparams['param_maxiters'])
-        self.methodparams['radou_bc'] = self.methodparams['radou_bc'] * (1.0 - smoothing_rate) + \
-                                        smoothing_rate * (radou_bc_ave / self.methodparams['param_maxiters'])
-        self.mcsamplvalues['MC_MSE_ave'] = self.mcsamplvalues['MC_MSE_ave'] * (1.0 - smoothing_rate) + \
-                                           smoothing_rate * (MSE_ave / self.methodparams['param_maxiters'])
-        self.mcsamplvalues['MC_resfracs_ave'] = self.mcsamplvalues['MC_resfracs_ave'] * (1.0 - smoothing_rate) + \
-                                           smoothing_rate * (residue_dfracs_ave / self.methodparams['param_maxiters']) # Not currently used but could be - average of residue fractions
+        self.methodparams['radou_bh'] = self.methodparams['radou_bh'] * (1.0 - self.mcsamplvalues['smoothing_rate']) + \
+                                        self.mcsamplvalues['smoothing_rate'] * (radou_bh_ave / self.methodparams['param_maxiters'])
+        self.methodparams['radou_bc'] = self.methodparams['radou_bc'] * (1.0 - self.mcsamplvalues['smoothing_rate']) + \
+                                        self.mcsamplvalues['smoothing_rate'] * (radou_bc_ave / self.methodparams['param_maxiters'])
+        self.mcsamplvalues['MC_MSE_ave'] = self.mcsamplvalues['MC_MSE_ave'] * (1.0 - self.mcsamplvalues['smoothing_rate']) + \
+                                           self.mcsamplvalues['smoothing_rate'] * (MSE_ave / self.methodparams['param_maxiters'])
+        self.mcsamplvalues['MC_resfracs_ave'] = self.mcsamplvalues['MC_resfracs_ave'] * (1.0 - self.mcsamplvalues['smoothing_rate']) + \
+                                           self.mcsamplvalues['smoothing_rate'] * (residue_dfracs_ave / self.methodparams['param_maxiters']) # Not currently used but could be - average of residue fractions
 
         # Update lambdas using final Bh & Bc values if desired
         if self.methodparams['do_reweight']:
-            _lambdanewh = self.mcsamplvalues['final_MClambdas_h'] * (1.0 - smoothing_rate) + \
-                          smoothing_rate * (self.mcsamplvalues['ave_MClambdas_h'] / self.methodparams['param_maxiters'])
-            _lambdanewc = self.mcsamplvalues['final_MClambdas_c'] * (1.0 - smoothing_rate) + \
-                          smoothing_rate * (self.mcsamplvalues['ave_MClambdas_c'] / self.methodparams['param_maxiters'])
+            _lambdanewh = self.mcsamplvalues['final_MClambdas_h'] * (1.0 - self.mcsamplvalues['smoothing_rate']) + \
+                          self.mcsamplvalues['smoothing_rate'] * (self.mcsamplvalues['ave_MClambdas_h'] / self.methodparams['param_maxiters'])
+            _lambdanewc = self.mcsamplvalues['final_MClambdas_c'] * (1.0 - self.mcsamplvalues['smoothing_rate']) + \
+                          self.mcsamplvalues['smoothing_rate'] * (self.mcsamplvalues['ave_MClambdas_c'] / self.methodparams['param_maxiters'])
             _lambdanew = 0.5 * ((_lambdanewh / self.methodparams['radou_bh']) + (_lambdanewc / self.methodparams['radou_bc']))
-            self.mcsamplvalues['final_MClambdas_h'] = self.runparams['gamma'] * _lambdanewh
-            self.mcsamplvalues['final_MClambdas_c'] = self.runparams['gamma'] * _lambdanewc
-            self.mcsamplvalues['final_MClambdas'] = 0.5 * ((self.mcsamplvalues['final_MClambdas_h'] / self.methodparams['radou_bh']) +
-                                                           (self.mcsamplvalues['final_MClambdas_c'] / self.methodparams['radou_bc']))
+            self.mcsamplvalues['final_MClambdas_h'] = _lambdanewh
+            self.mcsamplvalues['final_MClambdas_c'] = _lambdanewc
+            self.mcsamplvalues['final_MClambdas'] = _lambdanew
+            self.update_lambdas(self.mcsamplvalues['final_MClambdas'], self.mcsamplvalues['final_MClambdas_c'], self.mcsamplvalues['final_MClambdas_h'])
+
+
+    def calc_lambdas(self):
+        """Calculate target lambda values using current values of the following attributes:
+           self.runvalues['ave_lnpi'] : average ln(protection factor) for each residue/segment/timepoint
+           self.runvalues['curr_segment_dfracs'] : current deuterated fractions for each residue/segment/timepoint
+           self.runvalues['segfilters'] : Boolean filters to determine which residues belong to which segment
+           self.runvalues['minuskt_filtered'] : -kt (the numerator in calculating deuterated fractions), filtered using the Boolean filter above
+           self.runvalues['exp_dfrac_filtered'] : target deuterate fractions, filtered using the Boolean filter above
+
+           Returns: current_lambdas (np.array)"""
+        denom = self.runvalues['ave_lnpi'] * self.runvalues['segfilters']
+        curr_lambdas = np.nansum(
+            np.sum((self.runvalues['curr_segment_dfracs'] * self.runvalues['segfilters'] - self.runvalues['exp_dfrac_filtered']) * \
+                   np.exp(np.divide(self.runvalues['minuskt_filtered'], np.exp(denom),
+                                    out=np.full(self.runvalues['minuskt_filtered'].shape, np.nan),
+                                    where=denom != 0)) * \
+                   np.divide(-self.runvalues['minuskt_filtered'], np.exp(denom),
+                             out=np.full(self.runvalues['minuskt_filtered'].shape, np.nan),
+                             where=denom != 0), axis=2) / \
+            (np.sum(self.runvalues['segfilters'], axis=1)[:, 0])[:, np.newaxis], axis=0)
+        return curr_lambdas
+
+    def update_lambdas(self, target_lambdas, target_lambdas_c=None, target_lambdas_h=None):
+        """Update current lambda values by making a step size towards target lambda values
+
+           Input:
+           target_lambdas (np.array) : target lambda values calculated using self.calc_lambdas()
+
+           Output:
+           Updates self.runvalues['lambdas'] and self.runvalues['curr_lambda_stepsize'].
+           Optionally updates self.runvalues['lambdas_c'] and self.runvalues['lambdas_h'] if self.methodparams['do_mcsampl'] == True"""
+        # If MC sampling is on, use lambas_h and lambdas_c as accepted moves may be different so final lambdas may be different
+        if self.methodparams['do_mcsampl']:
+            self.mcsamplvalues['gamma_MClambdas_h'] = self.runparams['gamma'] * target_lambdas_h
+            self.mcsamplvalues['gamma_MClambdas_c'] = self.runparams['gamma'] * target_lambdas_c
+            self.mcsamplvalues['gamma_MClambdas'] = 0.5 * ((target_lambdas_h / self.methodparams['radou_bh']) +
+                                                           (target_lambdas_c / self.methodparams['radou_bc']))
 
             # Calc example stepsize & make move in lambdas
-            ave_deviation = np.sum(np.abs(_lambdanew)) / np.sum(self.mcsamplvalues['final_MClambdas'] != 0)
+            ave_deviation = np.sum(np.abs(target_lambdas)) / np.sum(self.mcsamplvalues['gamma_MClambdas'] != 0)
             self.runvalues['curr_lambda_stepsize'] = self.methodparams['stepfactor'] / (self.runparams['gamma'] * ave_deviation * self.runvalues['ave_sigma_lnpi']) # Example stepsize based on ave_sigma_lnpi
             self.mcsamplvalues['lambdas_c'] = self.mcsamplvalues['lambdas_c'] * (1.0 - self.runvalues['curr_lambda_stepsize']) + \
-                                              (self.runvalues['curr_lambda_stepsize'] * self.mcsamplvalues['final_MClambdas_c'])
+                                              (self.runvalues['curr_lambda_stepsize'] * self.mcsamplvalues['gamma_MClambdas_c'])
             self.mcsamplvalues['lambdas_h'] = self.mcsamplvalues['lambdas_h'] * (1.0 - self.runvalues['curr_lambda_stepsize']) + \
-                                              (self.runvalues['curr_lambda_stepsize'] * self.mcsamplvalues['final_MClambdas_h'])
+                                              (self.runvalues['curr_lambda_stepsize'] * self.mcsamplvalues['gamma_MClambdas_h'])
             self.runvalues['lambdas'] = self.runvalues['lambdas'] * (1.0 - self.runvalues['curr_lambda_stepsize']) + \
-                                            (self.runvalues['curr_lambda_stepsize'] * self.mcsamplvalues['final_MClambdas'])
-
+                                        (self.runvalues['curr_lambda_stepsize'] * self.mcsamplvalues['gamma_MClambdas'])
+        # All other cases, lambdas should be same for H and C
+        else:
+            gamma_target_lambdas = self.runparams['gamma'] * target_lambdas
+            # Calc example stepsize & make move in lambdas
+            ave_deviation = np.sum(np.abs(target_lambdas)) / np.sum(gamma_target_lambdas != 0)
+            self.runvalues['curr_lambda_stepsize'] = self.methodparams['stepfactor'] / (self.runparams['gamma'] * ave_deviation * self.runvalues['ave_sigma_lnpi'])  # Example stepsize based on ave_sigma_lnpi
+            self.runvalues['lambdas'] = self.runvalues['lambdas'] * (1.0 - self.runvalues['curr_lambda_stepsize']) + \
+                                        (self.runvalues['curr_lambda_stepsize'] * gamma_target_lambdas)
 
     def run(self, gamma=10**-2, runobj=None, restart=None, **run_params):
         self.set_run_params(gamma, runobj, restart, run_params)
