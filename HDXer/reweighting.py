@@ -390,17 +390,6 @@ class MaxEnt():
                           - self.runvalues['exp_dfrac_filtered']) ** 2) / self.runvalues['n_datapoints']
             return residue_dfracs, segment_dfracs, MSE
 
-        def calc_lambdas_in_sampleloop(ave_lnpi, segment_dfracs):
-            # Calculate values of lambda during middle of MC sampling loop to add to averages
-            denom = ave_lnpi * self.runvalues['segfilters']
-            curr_lambdas = np.nansum(np.sum((segment_dfracs * self.runvalues['segfilters'] - self.runvalues['exp_dfrac_filtered']) * \
-                                     np.exp(np.divide(self.runvalues['minuskt_filtered'], np.exp(denom), out=np.full(self.runvalues['minuskt_filtered'].shape, np.nan),
-                                                      where=denom != 0)) * \
-                                     np.divide(-self.runvalues['minuskt_filtered'], np.exp(denom), out=np.full(self.runvalues['minuskt_filtered'].shape, np.nan),
-                                               where=denom != 0), axis=2) / \
-                                   (np.sum(segfilters, axis=1)[:, 0])[:, np.newaxis], axis=0)
-            return curr_lambdas
-
         ### End of useful functions
         ### Start of sampling code
         # First, determine if we want to do some equilibration steps, and set the smoothing applied to the step size during equilibration
