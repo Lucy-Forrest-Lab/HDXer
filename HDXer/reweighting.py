@@ -1,13 +1,10 @@
 #!/usr/bin/env python
 
 import numpy as np
-import argparse, os, sys
-from glob import glob
-from copy import deepcopy
 import pickle
 
 from .errors import HDX_Error
-from .reweighting_functions import read_contacts_hbonds, read_kints_segments
+from .reweighting_functions import read_contacts_hbonds, read_kints_segments, generate_trial_betas, calc_trial_ave_lnpi, calc_trial_dfracs
 
 class MaxEnt():
     """Class for Maximum Entropy reweighting of a predicted
@@ -300,6 +297,39 @@ class MaxEnt():
         self.runvalues['curr_MSE'] = np.sum((self.runvalues['curr_segment_dfracs'] * self.runvalues['segfilters']
                                              - self.runvalues['exp_dfrac_filtered'])**2) / self.runvalues['n_datapoints']
 
+    def optimize_parameters_MC(self):
+        """Minimize beta parameters using an MC protocol. Beta parameter moves are accepted if they reduce mean
+           square error to the target data.
+
+           The final result of minimization updates the values of 'radou_bc' and 'radou_bh' in the
+           MaxEnt.methodparams dictionary, and 'ave_lnpi', 'curr_residue_dfracs', 'curr_segment_dfracs', and
+           'curr_MSE' in the MaxEnt.runvalues dictionary"""
+
+        # Get the weighted-average contacts & H-bonds for each residue
+        _ave_contacts = np.sum(self.runvalues['currweights'] * self.runvalues['contacts'], axis=1)
+        _ave_hbonds = np.sum(self.runvalues['currweights'] * self.runvalues['hbonds'], axis=1)
+
+        # Then do MC-based minimization
+        for curr_mc_iter in range(self.methodparams['param_maxiters']):
+            curr_radou_bc = self.methodparams['radou_bc']
+            curr_radou_bh = self.methodparams['radou_bh']
+            trial_radou_bc, trial_radou_bh = generate_trial_betas(self, curr_radou_bc, curr_radou_bh)
+            trial_ave_lnpi = calc_trial_ave_lnpi(self, _ave_contacts, _ave_hbonds, trial_radou_bc, trial_radou_bh)
+            trial_residue_dfracs, trial_segment_dfracs, trial_MSE = calc_trial_dfracs(self, trial_ave_lnpi)
+
+            if trial_MSE < self.runvalues['curr_MSE']:
+                self.methodparams['radou_bc'] = trial_radou_bc
+                self.methodparams['radou_bh'] = trial_radou_bh
+                self.runvalues['curr_MSE'] = trial_MSE
+                self.runvalues['ave_lnpi'] = trial_ave_lnpi
+                self.runvalues['curr_segment_dfracs'] = trial_segment_dfracs
+                self.runvalues['curr_residue_dfracs'] = trial_residue_dfracs
+
+    def optimize_parameters_gradient(self):
+        """Minimize beta parameters using a gradient descent protocol"""
+
+
+
     def sample_parameters_MC(self):
         """Sample range of beta parameters using an MC protocol.
 
@@ -356,40 +386,6 @@ class MaxEnt():
             ave_resfracs = total_resfracs / self.methodparams['param_maxiters']
             return ave_bc, ave_bh, ave_mse, ave_resfracs
 
-        def generate_trial_betas(bc, bh):
-            # Make move in betas scaled by step size and desired 'range' of sampling. -ve beta values are not allowed
-            trial_radou_bh, trial_radou_bc = -1, -1
-            while trial_radou_bh < 0:
-                trial_radou_bh = bh + ((np.random.random_sample()) - 0.5) \
-                                 * self.methodparams['param_stepfactor'] * self.methodparams['radou_bhrange']
-            while trial_radou_bc < 0:
-                trial_radou_bc = bc + ((np.random.random_sample()) - 0.5) \
-                                 * self.methodparams['param_stepfactor'] * self.methodparams['radou_bcrange']
-            return bc, bh
-
-        def calc_trial_ave_lnpi(ave_contacts, ave_hbonds, bc, bh):
-            # recalculate ave_lnpi with the given parameters & broadcast to the usual 3D array of [n_segments, n_residues, n_times]
-            trial_ave_lnpi = (bc * ave_contacts) + (bh * ave_hbonds)
-
-            trial_ave_lnpi = np.repeat(trial_ave_lnpi[:, np.newaxis], len(self.runparams['times']), axis=1)
-            trial_ave_lnpi = trial_ave_lnpi[np.newaxis, :, :].repeat(self.runvalues['n_segs'], axis=0)
-            return trial_ave_lnpi
-
-        def calc_trial_dfracs(ave_lnpi):
-            # recalculate the deuterated fractions and MSE with the given ave_lnpi
-            denom = ave_lnpi * self.runvalues['segfilters']
-            residue_dfracs = 1.0 - \
-                             np.exp(np.divide(self.runvalues['minuskt_filtered'], np.exp(denom),
-                                              out=np.full(self.runvalues['minuskt_filtered'].shape, np.nan),
-                                              where=denom != 0))
-
-            segment_dfracs = np.nanmean(residue_dfracs, axis=1)
-            segment_dfracs = segment_dfracs[:, np.newaxis, :].repeat(self.runvalues['segfilters'].shape[1],
-                                                                             axis=1)
-            MSE = np.sum((segment_dfracs * self.runvalues['segfilters']
-                          - self.runvalues['exp_dfrac_filtered']) ** 2) / self.runvalues['n_datapoints']
-            return residue_dfracs, segment_dfracs, MSE
-
         ### End of useful functions
         ### Start of sampling code
         # First, determine if we want to do some equilibration steps, and set the smoothing applied to the step size during equilibration
@@ -413,9 +409,9 @@ class MaxEnt():
         ### Start of main sampling loop
         for curr_mc_iter in range(self.methodparams['param_maxiters']):
             # 1) Make move in betas and recalculate protection factors & deuterated fractions
-            trial_radou_bc, trial_radou_bh = generate_trial_betas(curr_radou_bc, curr_radou_bh)
-            trial_ave_lnpi = calc_trial_ave_lnpi(_ave_contacts, _ave_hbonds, trial_radou_bc, trial_radou_bh)
-            trial_residue_dfracs, trial_segment_dfracs, trial_MSE = calc_trial_dfracs(trial_ave_lnpi)
+            trial_radou_bc, trial_radou_bh = generate_trial_betas(self, curr_radou_bc, curr_radou_bh)
+            trial_ave_lnpi = calc_trial_ave_lnpi(self, _ave_contacts, _ave_hbonds, trial_radou_bc, trial_radou_bh)
+            trial_residue_dfracs, trial_segment_dfracs, trial_MSE = calc_trial_dfracs(self, trial_ave_lnpi)
 
             # Immediately accept move if it improves MSE to experiment
             if trial_MSE < self.runvalues['curr_MSE']:

@@ -168,5 +168,71 @@ def read_kints_segments(kintfile, expt_path, n_res, times, sorted_resids):
     print("Segments and experimental dfracs read")
     return -kint, exp_dfrac, segfilters # Returns minuskt
 
+# Functions for MC optimisation & sampling
+def generate_trial_betas(reweight_obj, bc, bh):
+    """Generate trial beta values for an MC move. Move sizes are scaled by the self.methodparams['param_stepfactor']
+       of the provided reweighting object, and by the 'radou_bhrange' or 'radou_bcrange' entries in the same dictionary.
+       Negative beta values are not allowed; moves resulting in negative values will be resampled.
+
+       Requires a correctly set-up reweighting object, and current values of beta_c and beta_h.
+
+       Usage: generate_trial_betas(reweight_obj, bc, bh)
+
+       Returns: trial_bc, trial_bh
+       """
+    # Make move in betas scaled by step size and desired 'range' of sampling. -ve beta values are not allowed
+    trial_radou_bh, trial_radou_bc = -1, -1
+    while trial_radou_bh < 0:
+        trial_radou_bh = bh + ((np.random.random_sample()) - 0.5) \
+                         * reweight_obj.methodparams['param_stepfactor'] * reweight_obj.methodparams['radou_bhrange']
+    while trial_radou_bc < 0:
+        trial_radou_bc = bc + ((np.random.random_sample()) - 0.5) \
+                         * reweight_obj.methodparams['param_stepfactor'] * reweight_obj.methodparams['radou_bcrange']
+    return trial_radou_bc, trial_radou_bh
+
+
+def calc_trial_ave_lnpi(reweight_obj, ave_contacts, ave_hbonds, bc, bh):
+    """For a trial MC parameter move, calculate average ln(protection factors) using given average contacts & H-bonds,
+       and given beta values. The resulting array of protection factor for each residue is broadcast to a 3D array
+       of shape [n_segments, n_residues, n_times] using the self.runparams['times'] and self.runvalues['n_segs']
+       of the provided reweighting object.
+
+       Requires a correctly set-up reweighting object, current averaged contacts & H-bonds, and current values of
+       beta_c and beta_h.
+
+       Usage: calc_trial_ave_lnpi(reweight_obj, ave_contacts, ave_hbonds, bc, bh)
+
+       Returns: trial_ave_lnpi"""
+    # recalculate ave_lnpi with the given parameters & broadcast to the usual 3D array of [n_segments, n_residues, n_times]
+    trial_ave_lnpi = (bc * ave_contacts) + (bh * ave_hbonds)
+
+    trial_ave_lnpi = np.repeat(trial_ave_lnpi[:, np.newaxis], len(reweight_obj.runparams['times']), axis=1)
+    trial_ave_lnpi = trial_ave_lnpi[np.newaxis, :, :].repeat(reweight_obj.runvalues['n_segs'], axis=0)
+    return trial_ave_lnpi
+
+
+def calc_trial_dfracs(reweight_obj, ave_lnpi):
+    """For a trial MC parameter move, calculate deuterated fractions and mean square error to target data using
+       the given average ln(protection factors). Uses the self.runvalues['segfilters'] entry, and the 'minuskt_filtered',
+       'exp_dfrac_filtered' and 'n_datapoints' entries from the same dictionary.
+
+       Requires a correctly set-up reweighting object, and current average ln(protection factors).
+
+       Usage: calc_trial_dfracs(reweight_obj, ave_lnpi)
+
+       Returns: residue_dfracs, segment_dfracs, MSE_to_target"""
+    # recalculate the deuterated fractions and MSE with the given ave_lnpi
+    denom = ave_lnpi * reweight_obj.runvalues['segfilters']
+    residue_dfracs = 1.0 - \
+                     np.exp(np.divide(reweight_obj.runvalues['minuskt_filtered'], np.exp(denom),
+                                      out=np.full(reweight_obj.runvalues['minuskt_filtered'].shape, np.nan),
+                                      where=denom != 0))
+
+    segment_dfracs = np.nanmean(residue_dfracs, axis=1)
+    segment_dfracs = segment_dfracs[:, np.newaxis, :].repeat(reweight_obj.runvalues['segfilters'].shape[1],
+                                                             axis=1)
+    MSE = np.sum((segment_dfracs * reweight_obj.runvalues['segfilters']
+                  - reweight_obj.runvalues['exp_dfrac_filtered']) ** 2) / reweight_obj.runvalues['n_datapoints']
+    return residue_dfracs, segment_dfracs, MSE
 
 
