@@ -301,9 +301,10 @@ class MaxEnt():
         """Minimize beta parameters using an MC protocol. Beta parameter moves are accepted if they reduce mean
            square error to the target data.
 
-           The final result of minimization updates the values of 'radou_bc' and 'radou_bh' in the
+           Each step of minimization updates the values of 'radou_bc' and 'radou_bh' in the
            MaxEnt.methodparams dictionary, and 'ave_lnpi', 'curr_residue_dfracs', 'curr_segment_dfracs', and
-           'curr_MSE' in the MaxEnt.runvalues dictionary"""
+           'curr_MSE' in the MaxEnt.runvalues dictionary. Steps can be controlled with the 'param_maxiters'
+           entry in the MaxEnt.methodparams dictionary"""
 
         # Get the weighted-average contacts & H-bonds for each residue
         _ave_contacts = np.sum(self.runvalues['currweights'] * self.runvalues['contacts'], axis=1)
@@ -326,9 +327,69 @@ class MaxEnt():
                 self.runvalues['curr_residue_dfracs'] = trial_residue_dfracs
 
     def optimize_parameters_gradient(self):
-        """Minimize beta parameters using a gradient descent protocol"""
+        """Minimize beta parameters using a gradient descent protocol.
 
+           Each step of minimization updates the values of 'radou_bc' and 'radou_bh' in the
+           MaxEnt.methodparams dictionary, and 'ave_lnpi', 'curr_residue_dfracs', 'curr_segment_dfracs', and
+           'curr_MSE' in the MaxEnt.runvalues dictionary. Steps and convergence can be controlled with the
+           'param_maxiters' and 'tolerance' entries in the MaxEnt.methodparams dictionary"""
 
+        # Get the weighted-average contacts & H-bonds for each residue
+        _ave_contacts = np.sum(self.runvalues['currweights'] * self.runvalues['contacts'], axis=1)
+        _ave_hbonds = np.sum(self.runvalues['currweights'] * self.runvalues['hbonds'], axis=1)
+
+        # Then do gradient descent minimization
+        for curr_grad_iter in range(self.methodparams['param_maxiters']):
+            # define first derivative of chisquare wrt to Bh
+            # define derivative of the sim_dfrac wrt to parameters
+            # we need average number of contacts and hbonds calcd above
+
+            denom = self.runvalues['ave_lnpi'] * self.runvalues['segfilters']
+            rate_filtered = np.divide(-self.runvalues['minuskt_filtered'], np.exp(denom),
+                                      out=np.full(self.runvalues['minuskt_filtered'].shape, np.nan),
+                                      where=denom != 0)
+            der_dfrac_bh = np.nanmean(-(np.exp(-rate_filtered))
+                                      * rate_filtered * _ave_hbonds[np.newaxis, :, np.newaxis],
+                                      axis=1)  # need a sum over residues if data on fragments
+            der_dfrac_bc = np.nanmean(-(np.exp(-rate_filtered))
+                                      * rate_filtered * _ave_contacts[np.newaxis, :, np.newaxis],
+                                      axis=1)  # need a sum over residues if data on fragments
+            secder_dfrac_bh = np.nanmean(_ave_hbonds[np.newaxis, :, np.newaxis]**2
+                                         * (np.exp(-rate_filtered))
+                                         * (rate_filtered - rate_filtered**2), axis=1)
+            secder_dfrac_bc = np.nanmean(_ave_contacts[np.newaxis, :, np.newaxis]**2
+                                         * (np.exp(-rate_filtered))
+                                         * (rate_filtered - rate_filtered**2), axis=1)
+            delta_byseg_dfrac = np.nanmean((np.where(self.runvalues['segfilters'], self.runvalues['curr_segment_dfracs'], np.nan)
+                                               - np.where(self.runvalues['segfilters'], self.runvalues['exp_dfrac_filtered'], np.nan)), axis=1)
+            # Get derivs of betas
+            der_bh = 2.0 * np.sum(delta_byseg_dfrac * der_dfrac_bh)
+            der_bc = 2.0 * np.sum(delta_byseg_dfrac * der_dfrac_bc)
+            secder_bh = 2.0 * np.sum(der_dfrac_bh**2 + secder_dfrac_bh * delta_byseg_dfrac)
+            secder_bc = 2.0 * np.sum(der_dfrac_bc**2 + secder_dfrac_bc * delta_byseg_dfrac)
+
+            # now update the parameters
+            delta_bh = np.abs(der_bh / np.abs(secder_bh))
+            delta_bc = np.abs(der_bc / np.abs(secder_bc))
+            if delta_bh / np.abs(self.methodparams['radou_bh']) > self.methodparams['param_stepfactor']: # Scale steps if they're too large
+                self.methodparams['radou_bh'] = np.abs(self.methodparams['radou_bh']
+                                                       - self.methodparams['param_stepfactor'] * der_bh / np.abs(secder_bh))
+            else:
+                self.methodparams['radou_bh'] = np.abs(self.methodparams['radou_bh'] - der_bh / np.abs(secder_bh))
+            if delta_bc / np.abs(self.methodparams['radou_bc']) > self.methodparams['param_stepfactor']: # Scale steps if they're too large
+                self.methodparams['radou_bc'] = np.abs(self.methodparams['radou_bc']
+                                                       - self.methodparams['param_stepfactor'] * der_bc / np.abs(secder_bc))
+            else:
+                self.methodparams['radou_bc'] = np.abs(self.methodparams['radou_bc'] - der_bc / np.abs(secder_bc))
+
+            # Update values for the next iteration
+            self.runvalues['ave_lnpi'] = calc_trial_ave_lnpi(self, _ave_contacts, _ave_hbonds, self.methodparams['radou_bc'], self.methodparams['radou_bh'])
+            self.runvalues['curr_residue_dfracs'], self.runvalues['curr_segment_dfracs'], self.runvalues['curr_MSE'] = calc_trial_dfracs(self, self.runvalues['ave_lnpi'])
+
+            # Convergence criterion uses overall 'tolerance' values, same for lambdas
+            if delta_bh / np.abs(self.methodparams['radou_bh']) < self.methodparams['tolerance']:
+                if delta_bc / np.abs(self.methodparams['radou_bc']) < self.methodparams['tolerance']:
+                    break
 
     def sample_parameters_MC(self):
         """Sample range of beta parameters using an MC protocol.
