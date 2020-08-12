@@ -83,9 +83,10 @@ class MaxEnt():
                          'exp_dfrac_filtered' : None,
                          'n_datapoints' : None,
                          'n_segs' : None,
-                         'lambdamod' : None,
-                         'deltalambdamod' : None,
-                         'curriter' : None }
+                         'lambda_mod' : None,
+                         'delta_lambda_mod' : None,
+                         'curriter' : None,
+                         'is_converged' : None }
         _contacts, _hbonds, _sorted_resids = read_contacts_hbonds(folderlist,
                                                                   self.runparams['contacts_prefix'],
                                                                   self.runparams['hbonds_prefix'])
@@ -154,9 +155,10 @@ class MaxEnt():
         _exp_dfrac_filtered = _exp_dfrac * _segfilters
         _n_datapoints = np.sum(_segfilters)
         _n_segs = _segfilters.shape[0]
-        _lambdamod = 0.0
-        _deltalambdamod = 0.0
+        _lambda_mod = 0.0
+        _delta_lambda_mod = 0.0
         _curriter = 0
+        _converged = False
 
         maxentvalues.update(contacts = _contacts,
                             hbonds = _hbonds,
@@ -170,9 +172,10 @@ class MaxEnt():
                             exp_dfrac_filtered = _exp_dfrac_filtered,
                             n_datapoints = _n_datapoints,
                             n_segs = _n_segs,
-                            lambdamod = _lambdamod,
-                            deltalambdamod = _deltalambdamod,
-                            curriter = _curriter)
+                            lambda_mod = _lambda_mod,
+                            delta_lambda_mod = _delta_lambda_mod,
+                            curriter = _curriter,
+                            is_converged = _converged)
 
         self.runvalues.update(maxentvalues)
 
@@ -541,7 +544,6 @@ class MaxEnt():
             self.mcsamplvalues['final_MClambdas'] = _lambdanew
             self.update_lambdas(self.mcsamplvalues['final_MClambdas'], self.mcsamplvalues['final_MClambdas_c'], self.mcsamplvalues['final_MClambdas_h'])
 
-
     def calc_lambdas(self):
         """Calculate target lambda values using current values of the following attributes:
            self.runvalues['ave_lnpi'] : average ln(protection factor) for each residue/segment/timepoint
@@ -596,6 +598,54 @@ class MaxEnt():
             self.runvalues['curr_lambda_stepsize'] = self.methodparams['stepfactor'] / (self.runparams['gamma'] * ave_deviation * self.runvalues['ave_sigma_lnpi'])  # Example stepsize based on ave_sigma_lnpi
             self.runvalues['lambdas'] = self.runvalues['lambdas'] * (1.0 - self.runvalues['curr_lambda_stepsize']) + \
                                         (self.runvalues['curr_lambda_stepsize'] * gamma_target_lambdas)
+
+    def make_iteration(self):
+        """Perform a single HDXer iteration. One iteration consists of up to 4 steps,
+           depending on the options chosen for the run in the MaxEnt.runparams and MaxEnt.methodparams dictionaries:
+
+           1. Optimize beta parameters with current values of lambda & weights
+           2. Recalculate lambda values and make a step towards target
+           3. Update ln(protection factors) and frame weights with current values of lambda
+           4. Update predicted deuterated fractions and MSE to target data using current frame weights"""
+
+        # Optimize/sample parameters
+        if self.methodparams['do_mcsampl']:
+            sample_parameters_MC()
+        else if self.methodparams['do_mcmin']:
+            optimize_parameters_MC()
+        else if self.methodparams['do_params']:
+            optimize_parameters_gradient()
+
+        # Update lambdas
+        if not self.methodparams['do_mcsampl']: # Lambdas are updates internally in the sampling function if needed
+            if self.methodparams['do_reweight']:
+                curr_target_lambdas = calc_lambdas()
+                update_lambdas(curr_target_lambdas)
+
+        # Update predicted values
+        update_lnpi_and_weights()
+        update_dfracs_and_mse()
+
+        # Assess convergence
+        if not self.methodparams['do_reweight']:
+            self.runvalues['is_converged'] = True
+        else:
+            _prev_lambda_mod = self.runvalues['lambda_mod']
+            _prev_delta_lambda_mod = self.runvalues['delta_lambda_mod']
+            self.runvalues['lambda_mod'] = np.sum(np.abs(self.runvalues['lambdas']))
+            self.runvalues['delta_lambda_mod'] =  (self.runvalues['lambda_mod'] - _prev_lambda_mod) / self.runvalues['lambda_mod']
+
+            if self.runvalues['curriter'] >= 100:
+                if self.runvalues['delta_lambda_mod'] * _prev_delta_lambda_mod < 0:  # if oscillations in sign of delta_lambda
+                    self.methodparams['stepfactor'] =  self.methodparams['stepfactor'] / self.methodparams['stepfactor_scaling']
+
+            if np.abs(self.runvalues['delta_lambda_mod']) < self.methodparams['tolerance']:
+                self.runvalues['is_converged'] = True
+            if self.runvalues['lambda_mod'] < self.methodparams['tolerance']:
+                self.runvalues['is_converged'] = True
+
+        # Increase iteration count
+        self.runvalues['curriter'] += 1
 
     def run(self, gamma=10**-2, runobj=None, restart=None, **run_params):
         self.set_run_params(gamma, runobj, restart, run_params)
