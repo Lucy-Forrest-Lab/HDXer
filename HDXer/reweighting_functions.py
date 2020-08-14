@@ -234,4 +234,26 @@ def calc_trial_dfracs(reweight_obj, ave_lnpi):
                   - reweight_obj.runvalues['exp_dfrac_filtered']) ** 2) / reweight_obj.runvalues['n_datapoints']
     return residue_dfracs, segment_dfracs, MSE
 
+def calc_work(init_lnpi, lambdas, weights, kT):
+    """Calculate apparent work from the provided values of:
+       init_lnpi : np.array[n_residues, n_frames] of ln(protection_factor), on a by-residue & by-frame basis
+       #weighted_lnpi : np.array[n_segments, n_residues, n_times] of weighted-average ln(protection_factor) across all frames
+       lambdas : np.array[n_residues] of lambda values for each residue
+       weights : np.array[n_frames] of current weights for each frame (should sum to 1)
+       kT : value of kT for calculating work. Will determine units of the returned apparent work value.
+
+       Usage:
+       calc_work(init_lnpi, lambdas, weights, kT)
+
+       Returns:
+       work (float)"""
+
+    # This is the same ave_lnpi calculated in the reweighting.py code but not broadcast to the full 3D array
+    ave_lnpi = np.sum(weights * init_lnpi, axis=1)
+    meanbias = -kT * np.sum(lambdas * ave_lnpi)
+    biaspot = -kT * np.sum(np.atleast_2d(lambdas).T * init_lnpi, axis=0)
+    work = np.sum(weights * np.exp((biaspot - meanbias) / kT))
+    work = kT * np.log(work)
+    return work
+
 

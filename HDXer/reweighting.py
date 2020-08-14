@@ -4,7 +4,7 @@ import numpy as np
 import pickle
 
 from .errors import HDX_Error
-from .reweighting_functions import read_contacts_hbonds, read_kints_segments, generate_trial_betas, calc_trial_ave_lnpi, calc_trial_dfracs
+from .reweighting_functions import read_contacts_hbonds, read_kints_segments, generate_trial_betas, calc_trial_ave_lnpi, calc_trial_dfracs, calc_work
 
 class MaxEnt():
     """Class for Maximum Entropy reweighting of a predicted
@@ -219,9 +219,13 @@ class MaxEnt():
         if restart is not None:
             self.runparams['from_restart'] = True
             return
+        else:
+            self.runparams['from_restart'] = False
         if runobj is not None:
             self.runparams['from_calchdx'] = True
             return
+        else:
+            self.runparams['from_calchdx'] = False
 
         self.runparams.update(paramdict) # update with any provided options
 
@@ -299,6 +303,17 @@ class MaxEnt():
         # should give a mean square error that's weighted by the number of residues in each segment
         self.runvalues['curr_MSE'] = np.sum((self.runvalues['curr_segment_dfracs'] * self.runvalues['segfilters']
                                              - self.runvalues['exp_dfrac_filtered'])**2) / self.runvalues['n_datapoints']
+
+    def update_work(self):
+        """Calculate current apparent work value using current values of:
+           MaxEnt.runvalues['lnpi']
+           MaxEnt.runvalues['lambdas']
+           MaxEnt.runvalues['currweights']
+           MaxEnt.methodparams['kT']
+
+           Updates MaxEnt.runvalues['work'] with the current apparent work value. Units will be determined by the units of kT."""
+
+        self.runvalues['work'] = calc_work(self.runvalues['lnpi'], self.runvalues['lambdas'], self.runvalues['currweights'], self.methodparams['kT'])
 
     def optimize_parameters_MC(self):
         """Minimize beta parameters using an MC protocol. Beta parameter moves are accepted if they reduce mean
@@ -647,29 +662,44 @@ class MaxEnt():
         # Increase iteration count
         self.runvalues['curriter'] += 1
 
+    def write_iteration(reweight_obj):
+        """Write a single line of iteration output to an all-steps log file"""
+
+    def write_restart(reweight_obj):
+        """Write a single line of iteration output to a restart log file and save a restart pickle file"""
+
     def run(self, gamma=10**-2, runobj=None, restart=None, **run_params):
+        """Set up and perform a reweighting run"""
         self.set_run_params(gamma, runobj, restart, run_params)
 
-        # Choose which setup to do. Restart > Runobj > Normal
-        if restart is None:
-            if runobj is None:
-                try:
-                    self.setup_no_runobj(self.runparams['data_folders'],
-                                         self.runparams['kint_file'],
-                                         self.runparams['exp_file'],
-                                         self.runparams['times'])
-                except KeyError:
-                    raise HDX_Error("Missing parameters to set up a reweighting run.\n"
-                                    "Please ensure a restart or calc_hdx object is provided,"
-                                    "or provide the following arguments to the run() call:"
-                                    "data_folders, kint_file, exp_file, times")
-            else:
-                self.setup_runobj(runobj)
-        else:
+        # 1) Choose which setup to do. Restart > Runobj > Normal
+        if self.runparams['from_restart']:
             self.setup_restart(restart)
+        else if self.runparams['from_calchdx']:
+            self.setup_runobj(runobj)
+        else:
+            try:
+                self.setup_no_runobj(self.runparams['data_folders'],
+                                     self.runparams['kint_file'],
+                                     self.runparams['exp_file'],
+                                     self.runparams['times'])
+            except KeyError:
+                raise HDX_Error("Missing parameters to set up a reweighting run.\n"
+                                "Please ensure a restart or calc_hdx object is provided,"
+                                "or provide the following arguments to the run() call:"
+                                "data_folders, kint_file, exp_file, times")
 
-        # 1) Do setup (restart or no restart)
-        # 2) Do run 
+        # 2) Do run
+        # Set restart interval if not already set
+        try:
+            _ = self.runparams['restart_interval']
+        except KeyError:
+            self.runparams['restart_interval'] = int(self.methodparams['maxiters'] / 1000) # Max of 1000 restarts by default
+        # Do iterations until EITHER maxiters reached or convergence
+        while self.runvalues['curriter'] <= self.methodparams['maxiters'] and self.runvalues['is_converged'] == False:
+            self.make_iteration()
+            if (self.runvalues['curriter'] % self.runparams['restart_interval']) == 0:
+
         # 3) Do final save/cleanup
 
 
