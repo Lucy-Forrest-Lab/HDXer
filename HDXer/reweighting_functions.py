@@ -169,14 +169,14 @@ def read_kints_segments(kintfile, expt_path, n_res, times, sorted_resids):
     return -kint, exp_dfrac, segfilters # Returns minuskt
 
 # Functions for MC optimisation & sampling
-def generate_trial_betas(reweight_obj, bc, bh):
-    """Generate trial beta values for an MC move. Move sizes are scaled by the self.methodparams['param_stepfactor']
-       of the provided reweighting object, and by the 'radou_bhrange' or 'radou_bcrange' entries in the same dictionary.
+def generate_trial_betas(bc, bh, bcrange, bhrange, step_multiplier):
+    """Generate trial beta values for an MC move. Move sizes are scaled by the 'step_multiplier' argument,
+       and individually by the 'bcrange' or 'bhrange' arguments for the beta_c and beta_h values respectively.
        Negative beta values are not allowed; moves resulting in negative values will be resampled.
 
-       Requires a correctly set-up reweighting object, and current values of beta_c and beta_h.
+       Requires current values of beta_c and beta_h, bcrange, bhrange, and step_multiplier.
 
-       Usage: generate_trial_betas(reweight_obj, bc, bh)
+       Usage: generate_trial_betas(bc, bh, bcrange, bhrange, step_multiplier)
 
        Returns: trial_bc, trial_bh
        """
@@ -184,54 +184,56 @@ def generate_trial_betas(reweight_obj, bc, bh):
     trial_radou_bh, trial_radou_bc = -1, -1
     while trial_radou_bh < 0:
         trial_radou_bh = bh + ((np.random.random_sample()) - 0.5) \
-                         * reweight_obj.methodparams['param_stepfactor'] * reweight_obj.methodparams['radou_bhrange']
+                         * step_multiplier * bhrange
     while trial_radou_bc < 0:
         trial_radou_bc = bc + ((np.random.random_sample()) - 0.5) \
-                         * reweight_obj.methodparams['param_stepfactor'] * reweight_obj.methodparams['radou_bcrange']
+                         * step_multiplier * bcrange
     return trial_radou_bc, trial_radou_bh
 
 
-def calc_trial_ave_lnpi(reweight_obj, ave_contacts, ave_hbonds, bc, bh):
+def calc_trial_ave_lnpi(ave_contacts, ave_hbonds, bc, bh, n_times, n_segs):
     """For a trial parameter move, calculate average ln(protection factors) using given average contacts & H-bonds,
        and given beta values. The resulting array of protection factor for each residue is broadcast to a 3D array
-       of shape [n_segments, n_residues, n_times] using the self.runparams['times'] and self.runvalues['n_segs']
-       of the provided reweighting object.
+       of shape [n_segments, n_residues, n_times] using the provided n_times and n_segs arguments.
 
-       Requires a correctly set-up reweighting object, current averaged contacts & H-bonds, and current values of
-       beta_c and beta_h.
+       Requires current averaged contacts & H-bonds, current values of beta_c and beta_h, and n_times and n_segs.
 
-       Usage: calc_trial_ave_lnpi(reweight_obj, ave_contacts, ave_hbonds, bc, bh)
+       Usage: calc_trial_ave_lnpi(ave_contacts, ave_hbonds, bc, bh, n_times, n_segs)
 
        Returns: trial_ave_lnpi"""
     # recalculate ave_lnpi with the given parameters & broadcast to the usual 3D array of [n_segments, n_residues, n_times]
     trial_ave_lnpi = (bc * ave_contacts) + (bh * ave_hbonds)
 
-    trial_ave_lnpi = np.repeat(trial_ave_lnpi[:, np.newaxis], len(reweight_obj.runparams['times']), axis=1)
-    trial_ave_lnpi = trial_ave_lnpi[np.newaxis, :, :].repeat(reweight_obj.runvalues['n_segs'], axis=0)
+    trial_ave_lnpi = np.repeat(trial_ave_lnpi[:, np.newaxis], n_times), axis=1)
+    trial_ave_lnpi = trial_ave_lnpi[np.newaxis, :, :].repeat(n_segs, axis=0)
     return trial_ave_lnpi
 
 
-def calc_trial_dfracs(reweight_obj, ave_lnpi):
+def calc_trial_dfracs(ave_lnpi, segment_filters, filtered_minuskt, filtered_exp_dfracs, n_datapoints):
     """For a trial parameter move, calculate deuterated fractions and mean square error to target data using
-       the given average ln(protection factors). Uses the self.runvalues['segfilters'] entry, and the 'minuskt_filtered',
-       'exp_dfrac_filtered' and 'n_datapoints' entries from the same dictionary.
+       the given average ln(protection factors). Average protection factors should be a 3D array of shape
+       [n_segments, n_residues, n_times]. This is filtered to calculate the by-segment averages using the provided
+       segment_filters Boolean array. The provided filtered_minuskt array (pre-filtered by the same segment_filters array)
+       is then used to calculate the deuterated fractions. The provided filtered_exp_dfracs array and n_datapoints are
+       then used to calculate the MSE to the target experimental data.
 
-       Requires a correctly set-up reweighting object, and current average ln(protection factors).
+       Requires current average ln(protection factors), segment filters, pre-filtered -kt rate constants, pre-filtered
+       target experimental deuterated fractions, and total number of datapoints
 
-       Usage: calc_trial_dfracs(reweight_obj, ave_lnpi)
+       Usage: calc_trial_dfracs(ave_lnpi, segment_filters, filtered_minuskt, filtered_exp_dfracs, n_datapoints)
 
        Returns: residue_dfracs, segment_dfracs, MSE_to_target"""
     # recalculate the deuterated fractions and MSE with the given ave_lnpi
-    denom = ave_lnpi * reweight_obj.runvalues['segfilters']
+    denom = ave_lnpi * segment_filters
     residue_dfracs = 1.0 - \
-                     np.exp(np.divide(reweight_obj.runvalues['minuskt_filtered'], np.exp(denom),
-                                      out=np.full(reweight_obj.runvalues['minuskt_filtered'].shape, np.nan),
+                     np.exp(np.divide(filtered_minuskt, np.exp(denom),
+                                      out=np.full(filtered_minuskt.shape, np.nan),
                                       where=denom != 0))
 
     segment_dfracs = np.nanmean(residue_dfracs, axis=1)
-    segment_dfracs = segment_dfracs[:, np.newaxis, :].repeat(reweight_obj.runvalues['segfilters'].shape[1], axis=1)
-    MSE = np.sum((segment_dfracs * reweight_obj.runvalues['segfilters']
-                  - reweight_obj.runvalues['exp_dfrac_filtered']) ** 2) / reweight_obj.runvalues['n_datapoints']
+    segment_dfracs = segment_dfracs[:, np.newaxis, :].repeat(segment_filters.shape[1], axis=1)
+    MSE = np.sum((segment_dfracs * segment_filters
+                  - filtered_exp_dfracs) ** 2) / n_datapoints
     return residue_dfracs, segment_dfracs, MSE
 
 def calc_work(init_lnpi, lambdas, weights, kT):

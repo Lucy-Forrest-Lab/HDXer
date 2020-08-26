@@ -332,9 +332,17 @@ class MaxEnt():
         for curr_mc_iter in range(self.methodparams['param_maxiters']):
             curr_radou_bc = self.methodparams['radou_bc']
             curr_radou_bh = self.methodparams['radou_bh']
-            trial_radou_bc, trial_radou_bh = generate_trial_betas(self, curr_radou_bc, curr_radou_bh)
-            trial_ave_lnpi = calc_trial_ave_lnpi(self, _ave_contacts, _ave_hbonds, trial_radou_bc, trial_radou_bh)
-            trial_residue_dfracs, trial_segment_dfracs, trial_MSE = calc_trial_dfracs(self, trial_ave_lnpi)
+            trial_radou_bc, trial_radou_bh = generate_trial_betas(curr_radou_bc, curr_radou_bh,
+                                                                  self.methodparams['radou_bcrange'],
+                                                                  self.methodparams['radou_bhrange'],
+                                                                  self.methodparams['param_stepfactor'])
+            trial_ave_lnpi = calc_trial_ave_lnpi(_ave_contacts, _ave_hbonds, trial_radou_bc, trial_radou_bh,
+                                                 len(self.runparams['times']), self.runvalues['n_segs'])
+            trial_residue_dfracs, trial_segment_dfracs, trial_MSE = calc_trial_dfracs(trial_ave_lnpi,
+                                                                                      self.runvalues['segfilters'],
+                                                                                      self.runvalues['minuskt_filtered'],
+                                                                                      self.runvalues['exp_dfrac_filtered'],
+                                                                                      self.runvalues['n_datapoints'])
 
             if trial_MSE < self.runvalues['curr_MSE']:
                 self.methodparams['radou_bc'] = trial_radou_bc
@@ -401,8 +409,14 @@ class MaxEnt():
                 self.methodparams['radou_bc'] = np.abs(self.methodparams['radou_bc'] - der_bc / np.abs(secder_bc))
 
             # Update values for the next iteration
-            self.runvalues['ave_lnpi'] = calc_trial_ave_lnpi(self, _ave_contacts, _ave_hbonds, self.methodparams['radou_bc'], self.methodparams['radou_bh'])
-            self.runvalues['curr_residue_dfracs'], self.runvalues['curr_segment_dfracs'], self.runvalues['curr_MSE'] = calc_trial_dfracs(self, self.runvalues['ave_lnpi'])
+            self.runvalues['ave_lnpi'] = calc_trial_ave_lnpi(_ave_contacts, _ave_hbonds,
+                                                             self.methodparams['radou_bc'], self.methodparams['radou_bh'],
+                                                             len(self.runparams['times']), self.runvalues['n_segs'])
+            self.runvalues['curr_residue_dfracs'], self.runvalues['curr_segment_dfracs'], self.runvalues['curr_MSE'] = calc_trial_dfracs(self.runvalues['ave_lnpi'],
+                                                                                                                                         self.runvalues['segfilters'],
+                                                                                                                                         self.runvalues['minuskt_filtered'],
+                                                                                                                                         self.runvalues['exp_dfrac_filtered'],
+                                                                                                                                         self.runvalues['n_datapoints'])
 
             # Convergence criterion uses overall 'tolerance' values, same for lambdas
             if delta_bh / np.abs(self.methodparams['radou_bh']) < self.methodparams['tolerance']:
@@ -488,9 +502,17 @@ class MaxEnt():
         ### Start of main sampling loop
         for curr_mc_iter in range(self.methodparams['param_maxiters']):
             # 1) Make move in betas and recalculate protection factors & deuterated fractions
-            trial_radou_bc, trial_radou_bh = generate_trial_betas(self, curr_radou_bc, curr_radou_bh)
-            trial_ave_lnpi = calc_trial_ave_lnpi(self, _ave_contacts, _ave_hbonds, trial_radou_bc, trial_radou_bh)
-            trial_residue_dfracs, trial_segment_dfracs, trial_MSE = calc_trial_dfracs(self, trial_ave_lnpi)
+            trial_radou_bc, trial_radou_bh = generate_trial_betas(curr_radou_bc, curr_radou_bh,
+                                                                  self.methodparams['radou_bcrange'],
+                                                                  self.methodparams['radou_bhrange'],
+                                                                  self.methodparams['param_stepfactor'])
+            trial_ave_lnpi = calc_trial_ave_lnpi(_ave_contacts, _ave_hbonds, trial_radou_bc, trial_radou_bh,
+                                                 len(self.runparams['times']), self.runvalues['n_segs'])
+            trial_residue_dfracs, trial_segment_dfracs, trial_MSE = calc_trial_dfracs(trial_ave_lnpi,
+                                                                                      self.runvalues['segfilters'],
+                                                                                      self.runvalues['minuskt_filtered'],
+                                                                                      self.runvalues['exp_dfrac_filtered'],
+                                                                                      self.runvalues['n_datapoints'])
 
             # Immediately accept move if it improves MSE to experiment
             if trial_MSE < self.runvalues['curr_MSE']:
