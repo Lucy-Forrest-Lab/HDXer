@@ -582,20 +582,6 @@ class Analyze():
         return self # For consistency with pickle
 
 
-### Analysis object for multiple runs (Not yet implemented!)
-class MultiAnalyze():
-    """Class to contain results and analysis methods for HDX predictions"""
-
-    def __init__(self, filenames):
-        """Initialise a MultiAnalyze object from multiple individual
-           Analyze objects. All results are taken as the arithmetic mean
-           across the objects, with uncertainties taken as the corresponding
-           std. err. / std. dev."""
-
-        objects = [ pickle.load(open(fn, 'rb')) for fn in filenames ] 
-        summed_objs = sum(objects[1:], objects[0]) # Checks for object type & equivalence of rates/residxs
-        to_average = [ '' ]
-
 
 ### Plotting Class
 class Plots():

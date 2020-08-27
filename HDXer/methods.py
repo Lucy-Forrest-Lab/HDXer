@@ -59,6 +59,8 @@ class Radou(DfPredictor):
                     # SD = sd(A)/a
                     new.pfs[:,1] /= self.n_frames
                     new.pf_byframe = np.concatenate((self.pf_byframe, other.pf_byframe), axis=1)
+                    new.contacts = np.concatenate((self.contacts, other.contacts), axis=1)
+                    new.hbonds = np.concatenate((self.hbonds, other.hbonds), axis=1)
                     # Same for log(protection factors)
                     new.lnpf_byframe = np.concatenate((self.lnpf_byframe, other.lnpf_byframe), axis=1)
                     new.lnpfs[:,0] = np.mean(new.lnpf_byframe, axis=1)
@@ -348,8 +350,8 @@ class Radou(DfPredictor):
             reslist = [ self.top.atom(a).residue.index for a in hn_atms if self.top.atom(a).residue.is_protein ]
 
         # Calc Nc/Nh
-        hres, hbonds = self.calc_hbonds(hn_atms)
-        cres, contacts = self.calc_nh_contacts(reslist)
+        hres, n_hbonds = self.calc_hbonds(hn_atms)
+        cres, n_contacts = self.calc_nh_contacts(reslist)
 
         if not np.array_equal(hres, cres):
             raise HDX_Error("The residues analysed for Nc and Nh appear to be different. Check your inputs!")
@@ -362,13 +364,13 @@ class Radou(DfPredictor):
         if self.params['save_detailed']:
             for i, residx in enumerate(hres):
                 with open("Hbonds_chain_%d_res_%d.tmp" % (self.top.residue(residx).chain.index, self.top.residue(residx).resSeq), 'ab') as hbond_f:
-                    np.savetxt(hbond_f, hbonds[i], fmt=outfmt) # Use residue indices internally, print out IDs
+                    np.savetxt(hbond_f, n_hbonds[i], fmt=outfmt) # Use residue indices internally, print out IDs
             for i, residx in enumerate(cres):
                 with open("Contacts_chain_%d_res_%d.tmp" % (self.top.residue(residx).chain.index, self.top.residue(residx).resSeq), 'ab') as contacts_f:
-                    np.savetxt(contacts_f, contacts[i], fmt=outfmt) # Use residue indices internally, print out IDs
+                    np.savetxt(contacts_f, n_contacts[i], fmt=outfmt) # Use residue indices internally, print out IDs
         # Calc PF with phenomenological equation
-        hbonds *= self.params['betah']     # Beta parameter 1
-        contacts *= self.params['betac']   # Beta parameter 2
+        hbonds = n_hbonds * self.params['betah']     # Beta parameter 1
+        contacts = n_contacts * self.params['betac']   # Beta parameter 2
     
         pf_byframe = np.exp(hbonds + contacts)
         pf_bar = np.mean(pf_byframe, axis=1)
@@ -399,7 +401,7 @@ class Radou(DfPredictor):
             np.savetxt(self.params['outprefix']+"logProtection_factors.dat", np.concatenate((rids, lnpf_bar), axis=1),
                        fmt=['%7d', '%18.8f', '%18.8f'], header="ResID  ln(Protection factor) Std. Dev.") # Use residue indices internally, print out IDs
 
-        return hres, pf_bar, pf_byframe, lnpf_bar, lnpf_byframe
+        return hres, n_contacts, n_hbonds, pf_bar, pf_byframe, lnpf_bar, lnpf_byframe
 
     @functions.cacheobj()
     def run(self, trajectory):
@@ -414,7 +416,7 @@ class Radou(DfPredictor):
         self.assign_disulfide()
         self.assign_his_protonation()
         self.assign_termini()
-        self.reslist, self.pfs, self.pf_byframe, self.lnpfs, self.lnpf_byframe = self.PF()
+        self.reslist, self.contacts, self.hbonds, self.pfs, self.pf_byframe, self.lnpfs, self.lnpf_byframe = self.PF()
                                    
         self.rates = self.kint()
         self.resfracs = self.dfrac()

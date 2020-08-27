@@ -68,12 +68,12 @@ class MaxEnt():
 
     # Setup functions
     def setup_no_runobj(self, folderlist, kint_file, expt_file_path, times):
-        """Setup initial variables when a run object file is NOT read in"""
+        """Setup initial variables when calc_hdx object files are NOT provided"""
         self.runvalues = {}
 
         maxentvalues = { 'contacts' : None,
                          'hbonds' : None,
-                         'kint' : None,
+                         'minuskt' : None,
                          'exp_dfrac' : None,
                          'segfilters' : None,
                          'lambdas' : None,
@@ -117,7 +117,7 @@ class MaxEnt():
         # Write initial parameter values
         _nframes = _contacts.shape[1]
         with open("%sinitial_params.dat" % self.runparams['out_prefix'], 'w') as f:
-            f.write("Temp, kT, convergence tolerance, BetaC, BetaH, gamma, update rate (step size) factor, nframes\n")
+            f.write("Temp, kT, Convergence criterion, Beta_C, Beta_H, Gamma, Update rate (step size) factor, N frames\n")
             f.write("%s, %6.3f, %5.2e, %5.2f, %5.2f, %5.2e, %8.6f, %d\n"
                     % (self.methodparams['temp'],
                        self.methodparams['kT'],
@@ -144,11 +144,11 @@ class MaxEnt():
 
         # Write some headers in output files
         with open("%swork.dat" % self.runparams['out_prefix'], 'w') as f:
-            f.write("# gamma, chisquare, work(kJ/mol)\n")
+            f.write("# gamma, MSE to target, RMSE to target, work (kJ/mol by default)\n")
         with open("%sper_iteration_output.dat" % self.runparams['out_prefix'], 'w') as f:
-            f.write("# Iteration, avehdxdev, chisquare, lambdamod, deltalambdamod, rate, Bh, Bc \n")
+            f.write("# Iteration, MSE to target, RMSE to target, Total lambdas, Fractional change in lambda, Curr. stepsize, Curr. Bh, Curr. Bc \n")
         with open("%sper_restart_output.dat" % self.runparams['out_prefix'], 'w') as f:
-            f.write("# Iteration, avehdxdev, chisquare, lambdamod, deltalambdamod, rate, Bh, Bc, work \n")
+            f.write("# Iteration, MSE to target, RMSE to target, Total lambdas, Fractional change in lambda, Curr. stepsize, Curr. Bh, Curr. Bc, Curr. work \n")
 
         # Set some constants & initial values for the iteration loop
         _minuskt_filtered = -_minuskt * _segfilters
@@ -179,38 +179,177 @@ class MaxEnt():
 
         self.runvalues.update(maxentvalues)
 
-    def setup_runobj(self, runobj):
-        """Setup initial variables when a run object file IS read in"""
+    def setup_calc_hdx(self, resultsobj, analysisobj):
+        """Setup initial variables when calc_hdx object files ARE provided
+           So far this reads the by-residue Contacts, H-bonds, and residue IDs from the results object,
+           and times, expt. dfracs, and segments from the analysis object"""
+        self.runvalues = {}
+
+        maxentvalues = { 'contacts' : None,
+                         'hbonds' : None,
+                         'minuskt' : None,
+                         'exp_dfrac' : None,
+                         'segfilters' : None,
+                         'lambdas' : None,
+                         'nframes' : None,
+                         'iniweights' : None,
+                         'minuskt_filtered' : None,
+                         'exp_dfrac_filtered' : None,
+                         'n_datapoints' : None,
+                         'n_segs' : None,
+                         'lambda_mod' : None,
+                         'delta_lambda_mod' : None,
+                         'curriter' : None,
+                         'is_converged' : None }
+        _contacts, _hbonds, _sorted_resids = resultsobj.contacts, resultsobj.hbonds, np.array([ resultsobj.top.residue(residx).resSeq for residx in resultsobj.reslist ])
+        _nresidues = len(_hbonds)
+
+        ### This duplicates the function of reweighting_functions.read_kints_segments locally but using the calc_hdx objects
+        _kint = runobj.rates
+        _kint = np.repeat(_kint[:, np.newaxis], len(self.runparams['times']), axis=1) * self.runparams['times']
+
+        _exp_dfrac, _segments = analysisobj.expfracs, analysisobj.segres['segres']
+
+        # convert expt to (segments, residues, times)
+        _exp_dfrac = _exp_dfrac[:, np.newaxis, :].repeat(_n_residues, axis=1)
+        # convert kint to (segments, residues, times)
+        _kint = _kint[np.newaxis, :, :].repeat(len(_segments), axis=0)
+
+        # Make a set of filters that defines the residues in each segment & timepoint
+        _segfilters = []
+        for seg in _segments:
+            seg_resids = range(seg[0], seg[1] + 1)
+            _segfilters.append(np.in1d(_sorted_resids, seg_resids[1:]))  # Filter but skipping first residue in segment
+        _segfilters = np.array(_segfilters)
+        _segfilters = np.repeat(_segfilters[:, :, np.newaxis], len(self.runparams['times']),
+                               axis=2)  # Repeat to shape (n_segments, n_residues, n_times)
+
+        assert all((_segfilters.shape == _exp_dfrac.shape,
+                    _segfilters.shape == _kint.shape,
+                    _n_residues == len(_sorted_resids)))  # Check we've at least read in the right number!
+
+        print("Segments and experimental dfracs read from calc_hdx objects")
+        _minuskt = -_kint
+        ###
+
+        # Starting lambda values
+        _lambdas = np.zeros(_nresidues)
+
+        #    if mc_sample_params:
+        if self.methodparams['do_mcsampl']:
+            self.mcsamplvalues = {}
+            mcsamplvalues = {'final_MClambdas': np.zeros(_nresidues),
+                             'final_MClambdas_h': np.zeros(_nresidues),
+                             'final_MClambdas_c': np.zeros(_nresidues),
+                             'gamma_MClambdas_h': np.zeros(_nresidues),
+                             'gamma_MClambdas_c': np.zeros(_nresidues),
+                             'gamma_MClambdas': np.zeros(_nresidues),
+                             'ave_MClambdas_h': np.zeros(_nresidues),
+                             'ave_MClambdas_c': np.zeros(_nresidues),
+                             'lambdas_c': np.zeros(_nresidues),
+                             'lambdas_h': np.zeros(_nresidues),
+                             'MC_MSE_ave': 0.,
+                             'MC_resfracs_ave': 0.,
+                             'smoothing_rate': 1.0}
+            self.mcsamplvalues.update(mcsamplvalues)
+
+        # Write initial parameter values
+        _nframes = _contacts.shape[1]
+        with open("%sinitial_params.dat" % self.runparams['out_prefix'], 'w') as f:
+            f.write("Temp, kT, Convergence criterion, Beta_C, Beta_H, Gamma, Update rate (step size) factor, N frames\n")
+            f.write("%s, %6.3f, %5.2e, %5.2f, %5.2f, %5.2e, %8.6f, %d\n"
+                    % (self.methodparams['temp'],
+                       self.methodparams['kT'],
+                       self.methodparams['tolerance'],
+                       self.methodparams['radou_bc'],
+                       self.methodparams['radou_bh'],
+                       self.runparams['gamma'],
+                       self.methodparams['stepfactor'],
+                       _nframes))
+
+        # Random initial weights perturb the ensemble - e.g. can we recreate the final ensemble obtained with equally weighted frames?
+        # Seed for random state will be printed out in logfile for reproducibility
+        if self.methodparams['random_initial']:
+            np.random.seed(None)
+            statenum = np.random.randint(2**32)
+            state = np.random.RandomState(statenum)
+            with open("%sinitial_params.dat" % self.runparams['out_prefix'], 'a') as f:
+                f.write('Initial weights were randomized, seed for np.random.RandomState = %d\n' % statenum)
+            _iniweights = state.rand(_nframes)
+            np.savetxt("initial_weights_RandomState%d.dat" % statenum, _iniweights)
+            np.random.seed(None)
+        else:
+            _iniweights = np.ones(_nframes)
+
+        # Write some headers in output files
+        with open("%swork.dat" % self.runparams['out_prefix'], 'w') as f:
+            f.write("# gamma, MSE to target, RMSE to target, work (kJ/mol by default)\n")
+        with open("%sper_iteration_output.dat" % self.runparams['out_prefix'], 'w') as f:
+            f.write("# Iteration, MSE to target, RMSE to target, Total lambdas, Fractional change in lambda, Curr. stepsize, Curr. Bh, Curr. Bc \n")
+        with open("%sper_restart_output.dat" % self.runparams['out_prefix'], 'w') as f:
+            f.write("# Iteration, MSE to target, RMSE to target, Total lambdas, Fractional change in lambda, Curr. stepsize, Curr. Bh, Curr. Bc, Curr. work \n")
+
+        # Set some constants & initial values for the iteration loop
+        _minuskt_filtered = -_minuskt * _segfilters
+        _exp_dfrac_filtered = _exp_dfrac * _segfilters
+        _n_datapoints = np.sum(_segfilters)
+        _n_segs = _segfilters.shape[0]
+        _lambda_mod = 0.0
+        _delta_lambda_mod = 0.0
+        _curriter = 0
+        _converged = False
+
+        maxentvalues.update(contacts = _contacts,
+                            hbonds = _hbonds,
+                            minuskt = _minuskt,
+                            exp_dfrac = _exp_dfrac,
+                            segfilters = _segfilters,
+                            lambdas = _lambdas,
+                            nframes = _nframes,
+                            iniweights = _iniweights,
+                            minuskt_filtered = _minuskt_filtered,
+                            exp_dfrac_filtered = _exp_dfrac_filtered,
+                            n_datapoints = _n_datapoints,
+                            n_segs = _n_segs,
+                            lambda_mod = _lambda_mod,
+                            delta_lambda_mod = _delta_lambda_mod,
+                            curriter = _curriter,
+                            is_converged = _converged)
+
+        self.runvalues.update(maxentvalues)
 
     def setup_restart(self, rstfile):
         """Setup initial variables when a restart file IS read in"""
-        # List of pickle variables:
-        global contacts, hbonds, kint, exp_dfrac, segfilters, lambdas, \
-               lambdasc, lambdash, _lambdanewaverh, _lambdanewaverc, \
-               _lambdanew, _lambdanewh, _lambdanewc, chisquareav, \
-               nframes, iniweights, num, exp_df_segf, normseg, numseg, lambdamod, deltalambdamod, \
-               Bc, Bh, gamma, ratef, avesigmalnpi, currcount
-        contacts, hbonds, kint, exp_dfrac, segfilters, lambdas,lambdasc ,lambdash , _lambdanewaverh, _lambdanewaverc, \
-        _lambdanew, _lambdanewh, _lambdanewc, chisquareav, \
-        nframes, iniweights, num, exp_df_segf, normseg, numseg, lambdamod, deltalambdamod, \
-        Bc, Bh, gamma, ratef, avesigmalnpi, currcount = pickle.load(open(rstfile, 'rb'))
+        # Update self from pickle file
+        with open(rstfile, 'rb') as fpkl:
+            tmp_dict = pickle.load(fpkl)
+        self.__dict__.update(tmp_dict)
+
         # Append to existing files
         with open("%sinitial_params.dat" % self.runparams['out_prefix'], 'a') as f:
             f.write("# RESTARTED FROM FILE %s :\n" % rstfile)
-            f.write("Temp, kT, convergence tolerance, BetaC, BetaH, gamma, update rate (step size) factor, nframes\n")
-            f.write("%s, %6.3f, %5.2e, %5.2f, %5.2f, %5.2e, %8.6f, %d\n" % (T, kT, tol, Bc, Bh, gamma, ratef, nframes))
+            f.write("Temp, kT, Convergence criterion, Beta_C, Beta_H, Gamma, Update rate (step size) factor, N frames\n")
+            f.write("%s, %6.3f, %5.2e, %5.2f, %5.2f, %5.2e, %8.6f, %d\n"
+                    % (self.methodparams['temp'],
+                       self.methodparams['kT'],
+                       self.methodparams['tolerance'],
+                       self.methodparams['radou_bc'],
+                       self.methodparams['radou_bh'],
+                       self.runparams['gamma'],
+                       self.methodparams['stepfactor'],
+                       self.runvalues['contacts'].shape[1]))
         with open("%swork.dat" % self.runparams['out_prefix'], 'a') as f:
             f.write("# RESTARTED FROM FILE %s :\n" % rstfile)
-            f.write("# gamma, chisquare, work(kJ/mol)\n")
+            f.write("# gamma, MSE to target, RMSE to target, work (kJ/mol by default)\n")
         with open("%sper_iteration_output.dat" % self.runparams['out_prefix'], 'a') as f:
             f.write("# RESTARTED FROM FILE %s :\n" % rstfile)
-            f.write("# Iteration, avehdxdev, chisquare, lambdamod, deltalambdamod, rate, Bh, Bc \n")
+            f.write("# Iteration, MSE to target, RMSE to target, Total lambdas, Fractional change in lambda, Curr. stepsize, Curr. Bh, Curr. Bc \n")
         with open("%sper_restart_output.dat" % self.runparams['out_prefix'], 'a') as f:
             f.write("# RESTARTED FROM FILE %s :\n" % rstfile)
-            f.write("# Iteration, avehdxdev, chisquare, lambdamod, deltalambdamod, rate, Bh, Bc, work \n")
+            f.write("# Iteration, MSE to target, RMSE to target, Total lambdas, Fractional change in lambda, Curr. stepsize, Curr. Bh, Curr. Bc, Curr. work \n")
         print("Restart file %s read" % rstfile)
 
-    def set_run_params(self, gamma, runobj, restart, paramdict):
+    def set_run_params(self, gamma, resultsobj, analysisobj, restart, paramdict):
         """Set basic run parameters if not being read from calc_hdx object or a restart file"""
 
         self.runparams = {}
@@ -221,11 +360,19 @@ class MaxEnt():
             return
         else:
             self.runparams['from_restart'] = False
-        if runobj is not None:
-            self.runparams['from_calchdx'] = True
-            return
-        else:
-            self.runparams['from_calchdx'] = False
+        if resultsobj is not None:
+            if analysisobj is not None:
+                self.runparams['from_calchdx'] = True
+                self.runparams['times'] = analysisobj.params['times']
+                return
+            else:
+                raise HDX_Error("You've supplied a Radou results object from calc_hdx but not an Analysis object.\n"
+                                "Both are required if you wish to continue a calc_hdx run.")
+        if analysisobj is not None:
+            raise HDX_Error("You've supplied an Analysis object from calc_hdx but not a Radou results object.\n"
+                            "Both are required if you wish to continue a calc_hdx run.")
+
+        self.runparams['from_calchdx'] = False
 
         self.runparams.update(paramdict) # update with any provided options
 
@@ -283,7 +430,7 @@ class MaxEnt():
 
     def update_dfracs_and_mse(self):
         """Convert weighted-average protection factors to deuterated fractions
-           and calculate mean square error (MSE) and RMSE to experiment.
+           and calculate mean square error (MSE) to experiment.
 
            Updates 'curr_residue_dfracs', 'curr_segment_dfracs' and 'curr_MSE' entries in the MaxEnt.runvalues dictionary"""
 
@@ -684,21 +831,43 @@ class MaxEnt():
         # Increase iteration count
         self.runvalues['curriter'] += 1
 
-    def write_iteration(reweight_obj):
+    def write_iteration(self):
         """Write a single line of iteration output to an all-steps log file"""
+        with open("%sper_iteration_output.dat" % self.runparams['out_prefix'], 'a') as f:
+            f.write("%6d %8.6f %8.6f %10.8e %10.8e %10.8e %10.8e %10.8e \n" % (self.runvalues['curriter'],
+                                                                               self.runvalues['curr_MSE'],
+                                                                               np.sqrt(self.runvalues['curr_MSE']),
+                                                                               self.runvalues['lambda_mod'],
+                                                                               self.runvalues['delta_lambda_mod'],
+                                                                               self.runvalues['curr_lambda_stepsize'],
+                                                                               self.methodparams['radou_bc'],
+                                                                               self.methodparams['radou_bh']))
 
-    def write_restart(reweight_obj):
+    def write_restart(self):
         """Write a single line of iteration output to a restart log file and save a restart pickle file"""
+        with open("%sper_restart_output.dat" % self.runparams['out_prefix'], 'a') as f:
+            f.write("%6d %8.6f %8.6f %10.8e %10.8e %10.8e %10.8e %10.8e %8.5f \n" % (self.runvalues['curriter'],
+                                                                                     self.runvalues['curr_MSE'],
+                                                                                     np.sqrt(self.runvalues['curr_MSE']),
+                                                                                     self.runvalues['lambda_mod'],
+                                                                                     self.runvalues['delta_lambda_mod'],
+                                                                                     self.runvalues['curr_lambda_stepsize'],
+                                                                                     self.methodparams['radou_bc'],
+                                                                                     self.methodparams['radou_bh'],
+                                                                                     self.runvalues['work']))
+        with open("%srestart.pkl" % self.runparams['out_prefix'], 'wb') as fpkl:
+            pickle.dump(self.__dict__, fpkl, protocol=-1) # -1 for size purposes
 
-    def run(self, gamma=10**-2, runobj=None, restart=None, **run_params):
+    def run(self, gamma=10**-2, resultsobj=None, analysisobj=None, restart=None, **run_params):
         """Set up and perform a reweighting run"""
-        self.set_run_params(gamma, runobj, restart, run_params)
+        # 0) Set basic parameters
+        self.set_run_params(gamma, resultsobj, analysisobj, restart, run_params)
 
-        # 1) Choose which setup to do. Restart > Runobj > Normal
+        # 1) Choose which setup to do. Restart > calc_hdx_objs > Normal
         if self.runparams['from_restart']:
             self.setup_restart(restart)
         else if self.runparams['from_calchdx']:
-            self.setup_runobj(runobj)
+            self.setup_calc_hdx(resultsobj, analysisobj)
         else:
             try:
                 self.setup_no_runobj(self.runparams['data_folders'],
@@ -720,7 +889,9 @@ class MaxEnt():
         # Do iterations until EITHER maxiters reached or convergence
         while self.runvalues['curriter'] <= self.methodparams['maxiters'] and self.runvalues['is_converged'] == False:
             self.make_iteration()
+            self.write_iteration()
             if (self.runvalues['curriter'] % self.runparams['restart_interval']) == 0:
+                self.write_restart()
 
         # 3) Do final save/cleanup
 
