@@ -28,7 +28,10 @@ def strip_filename(filename, prefix):
         _ = filename.split(prefix)[1]
         return int(_.split(".")[0])
     except:
-        raise NameError("Unable to read residue number from Contacts/Hbonds file: %s" % filename)
+        raise NameError("Unable to read residue number from Contacts/Hbonds file: %s.\n"
+                        "Failed attempting to convert %s to resudue number.\n"
+                        "Perhaps your file prefix is incorrect?\n"
+                        "Current prefix: %s" % (filename, _, prefix))
 
 
 # Read in single column datafiles
@@ -204,7 +207,7 @@ def calc_trial_ave_lnpi(ave_contacts, ave_hbonds, bc, bh, n_times, n_segs):
     # recalculate ave_lnpi with the given parameters & broadcast to the usual 3D array of [n_segments, n_residues, n_times]
     trial_ave_lnpi = (bc * ave_contacts) + (bh * ave_hbonds)
 
-    trial_ave_lnpi = np.repeat(trial_ave_lnpi[:, np.newaxis], n_times), axis=1)
+    trial_ave_lnpi = np.repeat(trial_ave_lnpi[:, np.newaxis], n_times, axis=1)
     trial_ave_lnpi = trial_ave_lnpi[np.newaxis, :, :].repeat(n_segs, axis=0)
     return trial_ave_lnpi
 

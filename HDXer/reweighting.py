@@ -85,6 +85,7 @@ class MaxEnt():
                          'n_segs' : None,
                          'lambda_mod' : None,
                          'delta_lambda_mod' : None,
+                         'curr_lambda_stepsize' : None,
                          'curriter' : None,
                          'is_converged' : None }
         _contacts, _hbonds, _sorted_resids = read_contacts_hbonds(folderlist,
@@ -144,19 +145,20 @@ class MaxEnt():
 
         # Write some headers in output files
         with open("%swork.dat" % self.runparams['out_prefix'], 'w') as f:
-            f.write("# gamma, MSE to target, RMSE to target, work (kJ/mol by default)\n")
+            f.write("# gamma, weighted MSE to target, weighted RMSE to target, work (kJ/mol by default)\n")
         with open("%sper_iteration_output.dat" % self.runparams['out_prefix'], 'w') as f:
-            f.write("# Iteration, MSE to target, RMSE to target, Total lambdas, Fractional change in lambda, Curr. stepsize, Curr. Bh, Curr. Bc \n")
+            f.write("# Iteration, weighted MSE to target, weighted RMSE to target, Total lambdas, Fractional change in lambda, Curr. stepsize, Beta_C, Beta_H \n")
         with open("%sper_restart_output.dat" % self.runparams['out_prefix'], 'w') as f:
-            f.write("# Iteration, MSE to target, RMSE to target, Total lambdas, Fractional change in lambda, Curr. stepsize, Curr. Bh, Curr. Bc, Curr. work \n")
+            f.write("# Iteration, weighted MSE to target, weighted RMSE to target, Total lambdas, Fractional change in lambda, Curr. stepsize, Beta_C, Beta_H, Curr. work \n")
 
         # Set some constants & initial values for the iteration loop
-        _minuskt_filtered = -_minuskt * _segfilters
+        _minuskt_filtered = _minuskt * _segfilters
         _exp_dfrac_filtered = _exp_dfrac * _segfilters
         _n_datapoints = np.sum(_segfilters)
         _n_segs = _segfilters.shape[0]
         _lambda_mod = 0.0
         _delta_lambda_mod = 0.0
+        _curr_lambda_stepsize = 0.0
         _curriter = 0
         _converged = False
 
@@ -174,6 +176,7 @@ class MaxEnt():
                             n_segs = _n_segs,
                             lambda_mod = _lambda_mod,
                             delta_lambda_mod = _delta_lambda_mod,
+                            curr_lambda_stepsize = _curr_lambda_stepsize,
                             curriter = _curriter,
                             is_converged = _converged)
 
@@ -199,6 +202,7 @@ class MaxEnt():
                          'n_segs' : None,
                          'lambda_mod' : None,
                          'delta_lambda_mod' : None,
+                         'curr_lambda_stepsize' : None,
                          'curriter' : None,
                          'is_converged' : None }
         _contacts, _hbonds, _sorted_resids = resultsobj.contacts, resultsobj.hbonds, np.array([ resultsobj.top.residue(residx).resSeq for residx in resultsobj.reslist ])
@@ -283,19 +287,20 @@ class MaxEnt():
 
         # Write some headers in output files
         with open("%swork.dat" % self.runparams['out_prefix'], 'w') as f:
-            f.write("# gamma, MSE to target, RMSE to target, work (kJ/mol by default)\n")
+            f.write("# gamma, weighted MSE to target, weighted RMSE to target, work (kJ/mol by default)\n")
         with open("%sper_iteration_output.dat" % self.runparams['out_prefix'], 'w') as f:
-            f.write("# Iteration, MSE to target, RMSE to target, Total lambdas, Fractional change in lambda, Curr. stepsize, Curr. Bh, Curr. Bc \n")
+            f.write("# Iteration, weighted MSE to target, weighted RMSE to target, Total lambdas, Fractional change in lambda, Curr. stepsize, Beta_C, Beta_H \n")
         with open("%sper_restart_output.dat" % self.runparams['out_prefix'], 'w') as f:
-            f.write("# Iteration, MSE to target, RMSE to target, Total lambdas, Fractional change in lambda, Curr. stepsize, Curr. Bh, Curr. Bc, Curr. work \n")
+            f.write("# Iteration, weighted MSE to target, weighted RMSE to target, Total lambdas, Fractional change in lambda, Curr. stepsize, Beta_C, Beta_H, Curr. work \n")
 
         # Set some constants & initial values for the iteration loop
-        _minuskt_filtered = -_minuskt * _segfilters
+        _minuskt_filtered = _minuskt * _segfilters
         _exp_dfrac_filtered = _exp_dfrac * _segfilters
         _n_datapoints = np.sum(_segfilters)
         _n_segs = _segfilters.shape[0]
         _lambda_mod = 0.0
         _delta_lambda_mod = 0.0
+        _curr_lambda_stepsize = 0.0
         _curriter = 0
         _converged = False
 
@@ -313,6 +318,7 @@ class MaxEnt():
                             n_segs = _n_segs,
                             lambda_mod = _lambda_mod,
                             delta_lambda_mod = _delta_lambda_mod,
+                            curr_lambda_stepsize = _curr_lambda_stepsize,
                             curriter = _curriter,
                             is_converged = _converged)
 
@@ -340,13 +346,13 @@ class MaxEnt():
                        self.runvalues['contacts'].shape[1]))
         with open("%swork.dat" % self.runparams['out_prefix'], 'a') as f:
             f.write("# RESTARTED FROM FILE %s :\n" % rstfile)
-            f.write("# gamma, MSE to target, RMSE to target, work (kJ/mol by default)\n")
+            f.write("# gamma, weighted MSE to target, weighted RMSE to target, work (kJ/mol by default)\n")
         with open("%sper_iteration_output.dat" % self.runparams['out_prefix'], 'a') as f:
             f.write("# RESTARTED FROM FILE %s :\n" % rstfile)
-            f.write("# Iteration, MSE to target, RMSE to target, Total lambdas, Fractional change in lambda, Curr. stepsize, Curr. Bh, Curr. Bc \n")
+            f.write("# Iteration, weighted MSE to target, weighted RMSE to target, Total lambdas, Fractional change in lambda, Curr. stepsize, Beta_C, Beta_H \n")
         with open("%sper_restart_output.dat" % self.runparams['out_prefix'], 'a') as f:
             f.write("# RESTARTED FROM FILE %s :\n" % rstfile)
-            f.write("# Iteration, MSE to target, RMSE to target, Total lambdas, Fractional change in lambda, Curr. stepsize, Curr. Bh, Curr. Bc, Curr. work \n")
+            f.write("# Iteration, weighted MSE to target, weighted RMSE to target, Total lambdas, Fractional change in lambda, Curr. stepsize, Beta_C, Beta_H, Curr. work \n")
         print("Restart file %s read" % rstfile)
 
     def set_run_params(self, gamma, resultsobj, analysisobj, restart, paramdict):
@@ -380,11 +386,11 @@ class MaxEnt():
         try:
             self.runparams['hbonds_prefix']
         except KeyError:
-            self.runparams['hbonds_prefix'] = 'Hbonds_'
+            self.runparams['hbonds_prefix'] = 'Hbonds_chain_0_res_'
         try:
             self.runparams['contacts_prefix']
         except KeyError:
-            self.runparams['contacts_prefix'] = 'Contacts_'
+            self.runparams['contacts_prefix'] = 'Contacts_chain_0_res_'
         try:
             self.runparams['out_prefix']
         except KeyError:
@@ -417,7 +423,7 @@ class MaxEnt():
 
         # Calculate helper values & convert weighted-average protection factors to 3 dimensions.
         # On first iteration, set std. dev. of ln(Pf)
-        if self.runvalues['curriter'] == 1:
+        if self.runvalues['curriter'] == 0:
             _sigmalnpi = np.sum(self.runvalues['currweights'] * (self.runvalues['lnpi']**2), axis=1)
             _sigmalnpi = _sigmalnpi - (self.runvalues['ave_lnpi']**2)
             self.runvalues['sigma_lnpi'] = np.sqrt(_sigmalnpi)
@@ -431,6 +437,8 @@ class MaxEnt():
     def update_dfracs_and_mse(self):
         """Convert weighted-average protection factors to deuterated fractions
            and calculate mean square error (MSE) to experiment.
+
+           The MSE is weighted by the number of residues in each segment.
 
            Updates 'curr_residue_dfracs', 'curr_segment_dfracs' and 'curr_MSE' entries in the MaxEnt.runvalues dictionary"""
 
@@ -794,21 +802,22 @@ class MaxEnt():
 
         # Optimize/sample parameters
         if self.methodparams['do_mcsampl']:
-            sample_parameters_MC()
-        else if self.methodparams['do_mcmin']:
-            optimize_parameters_MC()
-        else if self.methodparams['do_params']:
-            optimize_parameters_gradient()
+            self.sample_parameters_MC()
+        elif self.methodparams['do_mcmin']:
+            self.optimize_parameters_MC()
+        elif self.methodparams['do_params']:
+            self.optimize_parameters_gradient()
 
         # Update lambdas
-        if not self.methodparams['do_mcsampl']: # Lambdas are updates internally in the sampling function if needed
+        if not self.methodparams['do_mcsampl']: # Lambdas are updated internally in the sampling function if needed
             if self.methodparams['do_reweight']:
-                curr_target_lambdas = calc_lambdas()
-                update_lambdas(curr_target_lambdas)
+                curr_target_lambdas = self.calc_lambdas()
+                self.update_lambdas(curr_target_lambdas)
 
         # Update predicted values
-        update_lnpi_and_weights()
-        update_dfracs_and_mse()
+        self.update_lnpi_and_weights()
+        self.update_dfracs_and_mse()
+        self.update_work()
 
         # Assess convergence
         if not self.methodparams['do_reweight']:
@@ -866,7 +875,7 @@ class MaxEnt():
         # 1) Choose which setup to do. Restart > calc_hdx_objs > Normal
         if self.runparams['from_restart']:
             self.setup_restart(restart)
-        else if self.runparams['from_calchdx']:
+        elif self.runparams['from_calchdx']:
             self.setup_calc_hdx(resultsobj, analysisobj)
         else:
             try:
@@ -877,10 +886,14 @@ class MaxEnt():
             except KeyError:
                 raise HDX_Error("Missing parameters to set up a reweighting run.\n"
                                 "Please ensure a restart or calc_hdx object is provided,"
-                                "or provide the following arguments to the run() call:"
+                                "or provide the following arguments to the run() call: "
                                 "data_folders, kint_file, exp_file, times")
 
         # 2) Do run
+        # Set initial values of weights, lnpi, ave_lnpi, dfracs, and mse on first iteration
+        if self.runvalues['curriter'] == 0:
+            self.update_lnpi_and_weights()
+            self.update_dfracs_and_mse()
         # Set restart interval if not already set
         try:
             _ = self.runparams['restart_interval']
@@ -894,8 +907,11 @@ class MaxEnt():
                 self.write_restart()
 
         # 3) Do final save/cleanup
+        # If we calculate MSE to expt from the final segments printed out we'll get a different MSE
+        # to that in the work file. Why? Because work file MSE is weighted by the length of the segments.
         np.savetxt("%sfinal_segment_fractions.dat" % self.runparams['out_prefix'],
-                   np.mean(self.runvalues['curr_segment_dfracs'] * self.runvalues['segfilters'], axis=1),
+                   np.sum(self.runvalues['curr_segment_dfracs'] * self.runvalues['segfilters'], axis=1)
+                   / np.sum(self.runvalues['segfilters'], axis=1),
                    header="Times: " + " ".join(str(t) for t in self.runparams['times']), fmt="%8.5f")
         np.savetxt("%sfinal_weights.dat" % self.runparams['out_prefix'], self.runvalues['currweights'])
 

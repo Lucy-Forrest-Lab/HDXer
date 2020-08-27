@@ -91,7 +91,7 @@ def test_reweight_data_io_1():
 
 
     test_obj = reweighting.MaxEnt()
-    test_obj.set_run_params(10**-2, None, None, test_param_dict)
+    test_obj.set_run_params(10**-2, None, None, None, test_param_dict)
     test_obj.setup_no_runobj(test_obj.runparams['data_folders'],
                              test_obj.runparams['kint_file'],
                              test_obj.runparams['exp_file'],
@@ -121,6 +121,9 @@ def test_update_lnpi_1():
                               [0. , 2., 0., 0., 0., 0., 0., 0., 2., 0.],
                               [3.4, 1.4, 11.7, 1.4, 5.85, 1.4, 12.05, 1.05, 5.5, 1.75]])
     expected_avelnpi = np.array([3.8 , 5.5 , 8.25, 2.8 , 0.4 , 4.55])
+    expected_shape = (3,6,3) # Shape of ave_lnpi array as [n_segs, n_residues, n_times]
+    expected_avelnpi = np.broadcast_to(expected_avelnpi[np.newaxis, :, np.newaxis], expected_shape)
+
     # Calculated with Bc = 0.25, Bh = 5.25
     expected_lnpi_newbetas = np.array([[7.75, 7.75, 7.75, 1.25, 1.25, 15.5, 1.25, 1.25, 1.25, 1.25],
                                        [7.75, 7.75, 7.75, 7.75, 7.75, 7.75, 7.75, 7.75, 7.75, 7.75],
@@ -129,6 +132,7 @@ def test_update_lnpi_1():
                                        [0., 5.25, 0., 0., 0., 0., 0., 0., 5.25, 0.],
                                        [6.25, 1., 16., 1., 8., 1., 16.25, 0.75, 7.75, 1.25]])
     expected_avelnpi_newbetas = np.array([ 4.625,  7.75 , 11.625,  2.   ,  1.05 ,  5.925])
+    expected_avelnpi_newbetas = np.broadcast_to(expected_avelnpi_newbetas[np.newaxis, :, np.newaxis], expected_shape)
 
 
 
@@ -148,7 +152,7 @@ def test_update_lnpi_1():
 
 
     test_obj = reweighting.MaxEnt()
-    test_obj.set_run_params(10**-2, None, None, test_param_dict)
+    test_obj.set_run_params(10**-2, None, None, None, test_param_dict)
     test_obj.setup_no_runobj(test_obj.runparams['data_folders'],
                              test_obj.runparams['kint_file'],
                              test_obj.runparams['exp_file'],
@@ -157,6 +161,7 @@ def test_update_lnpi_1():
     test_obj.update_lnpi_and_weights()
     assert np.array_equal(test_obj.runvalues['iniweights'], expected_iniweights)
     assert np.allclose(test_obj.runvalues['lnpi'], expected_lnpi)
+    assert test_obj.runvalues['ave_lnpi'].shape == expected_shape
     assert np.allclose(test_obj.runvalues['ave_lnpi'], expected_avelnpi)
     test_obj.methodparams['radou_bc'] = 0.25
     test_obj.methodparams['radou_bh'] = 5.25
@@ -183,7 +188,7 @@ def test_update_lnpi_2():
     test_methodparam_dict = { 'radou_bc' : 0.25,
                               'radou_bh' : 5.25 }
     test_obj = reweighting.MaxEnt(**test_methodparam_dict)
-    test_obj.set_run_params(10**-2, None, None, test_param_dict)
+    test_obj.set_run_params(10**-2, None, None, None, test_param_dict)
     test_obj.setup_no_runobj(test_obj.runparams['data_folders'],
                              test_obj.runparams['kint_file'],
                              test_obj.runparams['exp_file'],
@@ -213,8 +218,11 @@ def test_update_lnpi_2():
                                      2.38208213e-07, 4.41969461e-14, 9.23633476e-09, 7.28684451e-14])
     expected_avelnpi_newbetas = np.array([7.75002633e+00, 7.75000000e+00, 1.54999692e+01, 
                                           2.50000883e+00, 3.06058537e-04, 1.59985003e+01])
+    expected_shape = (3,6,3) # ave_lnpi is array of shape [n_segs, n_residues, n_times]
+    expected_avelnpi_newbetas = np.broadcast_to(expected_avelnpi_newbetas[np.newaxis, :, np.newaxis], expected_shape)
 
     assert np.allclose(test_obj.runvalues['lnpi'], expected_lnpi_newbetas)
+    assert test_obj.runvalues['ave_lnpi'].shape == expected_shape
     assert np.allclose(test_obj.runvalues['ave_lnpi'], expected_avelnpi_newbetas)
     assert np.allclose(test_obj.runvalues['currweights'], expected_currweights)
     assert np.isclose(np.sum(test_obj.runvalues['currweights']), 1.0)
@@ -234,8 +242,11 @@ def test_update_lnpi_2():
                                      6.57010430e-01, 2.26174337e-14, 2.72069635e-08, 6.14805589e-14])
     expected_avelnpi_newbetas = np.array([3.47943189e+00, 7.75000000e+00, 1.04081690e+01, 
                                           1.67873690e+00, 1.42836727e-07, 1.61642522e+01])
+    expected_shape = (3,6,3) # ave_lnpi is array of shape [n_segs, n_residues, n_times]
+    expected_avelnpi_newbetas = np.broadcast_to(expected_avelnpi_newbetas[np.newaxis, :, np.newaxis], expected_shape)
 
     assert np.allclose(test_obj.runvalues['lnpi'], expected_lnpi_newbetas)
+    assert test_obj.runvalues['ave_lnpi'].shape == expected_shape
     assert np.allclose(test_obj.runvalues['ave_lnpi'], expected_avelnpi_newbetas)
     assert np.allclose(test_obj.runvalues['currweights'], expected_currweights)
     assert np.isclose(np.sum(test_obj.runvalues['currweights']), 1.0)
