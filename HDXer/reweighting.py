@@ -118,7 +118,7 @@ class MaxEnt():
         _nframes = _contacts.shape[1]
         with open("%sinitial_params.dat" % self.runparams['out_prefix'], 'w') as f:
             f.write("Temp, kT, Convergence criterion, Beta_C, Beta_H, Gamma, Update rate (step size) factor, N frames\n")
-            f.write("%s, %6.3f, %5.2e, %5.2f, %5.2f, %5.2e, %8.6f, %d\n"
+            f.write("%s, %6.3f, %5.2e, %5.2f, %5.2f, %5.4e, %8.6f, %d\n"
                     % (self.methodparams['temp'],
                        self.methodparams['kT'],
                        self.methodparams['tolerance'],
@@ -894,5 +894,22 @@ class MaxEnt():
                 self.write_restart()
 
         # 3) Do final save/cleanup
+        np.savetxt("%sfinal_segment_fractions.dat" % self.runparams['out_prefix'],
+                   np.mean(self.runvalues['curr_segment_dfracs'] * self.runvalues['segfilters'], axis=1),
+                   header="Times: " + " ".join(str(t) for t in self.runparams['times']), fmt="%8.5f")
+        np.savetxt("%sfinal_weights.dat" % self.runparams['out_prefix'], self.runvalues['currweights'])
 
+        with open("%swork.dat" % self.runparams['out_prefix'], 'a') as f:
+            f.write("%5.4e %8.6f %8.6f %8.5f \n" % (self.runparams['gamma'], self.runvalues['curr_MSE'],
+                                                    np.sqrt(self.runvalues['curr_MSE']), self.runvalues['work']))
 
+        with open("%sper_iteration_output.dat" % self.runparams['out_prefix'], 'a') as f:
+            f.write("%6d %8.6f %8.6f %10.8e %10.8e %10.8e %10.8e %10.8e # FINAL values at convergence or max iterations\n"
+                    % (self.runvalues['curriter'],
+                       self.runvalues['curr_MSE'],
+                       np.sqrt(self.runvalues['curr_MSE']),
+                       self.runvalues['lambda_mod'],
+                       self.runvalues['delta_lambda_mod'],
+                       self.runvalues['curr_lambda_stepsize'],
+                       self.methodparams['radou_bc'],
+                       self.methodparams['radou_bh']))
