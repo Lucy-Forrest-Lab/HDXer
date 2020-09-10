@@ -426,6 +426,8 @@ class MaxEnt():
         if self.runvalues['curriter'] == 0:
             _sigmalnpi = np.sum(self.runvalues['currweights'] * (self.runvalues['lnpi']**2), axis=1)
             _sigmalnpi = _sigmalnpi - (self.runvalues['ave_lnpi']**2)
+            # Round off possible minor fp arithmetic problems if the std. dev is 0
+            np.where(np.isclose(_sigmalnpi, 0, atol=10**-12), 0, _sigmalnpi)
             self.runvalues['sigma_lnpi'] = np.sqrt(_sigmalnpi)
             self.runvalues['ave_sigma_lnpi'] = np.mean(self.runvalues['sigma_lnpi'])
 
