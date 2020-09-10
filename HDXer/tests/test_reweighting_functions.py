@@ -55,3 +55,41 @@ def test_read_contacts_hbonds():
     assert out_res == expected_resids
 
 
+def test_read_kints_segments():
+    """Test the processing of intrinsic rates files and target
+       (experimental) HDX data files."""
+
+    # First check all residues can be read in correctly
+    test_folder = 'HDXer/tests/data/reweighting_1'
+    test_rates_file = os.path.join(test_folder, 'intrinsic_rates.dat')
+    test_expt_file = os.path.join(test_folder, 'experimental_data.dat')
+    test_times = np.array([0.5, 5.0, 60.0])
+    test_n_res = 6
+    test_resids = np.array([[2, 3, 4, 5, 6, 7]], dtype=np.int16) # 2D array as residues usually come from a list of input files
+
+    expected_minuskt = np.array([10.0, 100.0, 1000.0, 0.1, 268.21, 8.5])
+    expected_minuskt = np.repeat(expected_minuskt[:, np.newaxis], len(test_times), axis=1)*test_times
+    expected_minuskt = expected_minuskt[np.newaxis,:,:].repeat(3, axis=0) # Repeat 3 because there are 3 segments in this target data file
+    expected_minuskt *= -1
+
+    expected_expt = np.array([[ 0.72823031, 0.83269571, 0.97653617 ],
+                              [ 0.75439649, 0.79088392, 0.97067021 ],
+                              [ 0.99994366, 1.00000000, 1.00000000 ]])
+    expected_expt = expected_expt[:,np.newaxis,:].repeat(test_n_res, axis=1)
+
+    # Filter is hard coded to skip the first residue in the segment 
+    expected_segfilters = np.array([[ False, True, True, True, True, True ],
+                                    [ False, True, True, True, True, False ],
+                                    [ False, False, True, True, False, False ]])
+    expected_segfilters = np.repeat(expected_segfilters[:, :, np.newaxis], len(test_times), axis=2)
+
+    out_minuskt, out_expt, out_segfilters = reweighting_functions.read_kints_segments(test_rates_file,
+                                                                                      test_expt_file,
+                                                                                      test_n_res,
+                                                                                      test_times,
+                                                                                      test_resids)
+    assert np.array_equal(out_minuskt, expected_minuskt)
+    assert np.array_equal(out_expt, expected_expt)
+    assert np.array_equal(out_segfilters, expected_segfilters)
+
+
