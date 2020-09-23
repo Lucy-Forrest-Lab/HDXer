@@ -797,10 +797,16 @@ class MaxEnt():
         """Perform a single HDXer iteration. One iteration consists of up to 4 steps,
            depending on the options chosen for the run in the MaxEnt.runparams and MaxEnt.methodparams dictionaries:
 
-           1. Optimize beta parameters with current values of lambda & weights
+           *** This version is designed to mimic the OLD iteration loop, used for the original scripts by
+               Richard & Fabrizio.
+           ***
+           1. Update ln(protection factors) and frame weights with current values of lambda
            2. Recalculate lambda values and make a step towards target
-           3. Update ln(protection factors) and frame weights with current values of lambda
+           3. Optimize beta parameters with current values of lambda & weights
            4. Update predicted deuterated fractions and MSE to target data using current frame weights"""
+
+        # Update weights
+        self.update_lnpi_and_weights()
 
         # Optimize/sample parameters
         if self.methodparams['do_mcsampl']:
@@ -817,7 +823,6 @@ class MaxEnt():
                 self.update_lambdas(curr_target_lambdas)
 
         # Update predicted values
-        self.update_lnpi_and_weights()
         self.update_dfracs_and_mse()
         self.update_work()
 
@@ -909,6 +914,11 @@ class MaxEnt():
                 self.write_restart()
 
         # 3) Do final save/cleanup
+        # Update the final dfracs and work values
+        self.update_lnpi_and_weights()
+        self.update_dfracs_and_mse()
+        self.update_work()
+
         # If we calculate MSE to expt from the final segments printed out we'll get a different MSE
         # to that in the work file. Why? Because work file MSE is weighted by the length of the segments.
         np.savetxt("%sfinal_segment_fractions.dat" % self.runparams['out_prefix'],
