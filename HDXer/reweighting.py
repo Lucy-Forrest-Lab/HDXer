@@ -876,7 +876,8 @@ class MaxEnt():
 
     def run(self, gamma=10**-2, resultsobj=None, analysisobj=None, restart=None, **run_params):
         """Set up and perform a reweighting run"""
-        # 0) Set basic parameters
+        print("The old iteration loop is being used for reweighting.")
+	# 0) Set basic parameters
         self.set_run_params(gamma, resultsobj, analysisobj, restart, run_params)
 
         # 1) Choose which setup to do. Restart > calc_hdx_objs > Normal
