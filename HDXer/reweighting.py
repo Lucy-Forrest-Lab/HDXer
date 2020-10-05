@@ -209,13 +209,13 @@ class MaxEnt():
         _nresidues = len(_hbonds)
 
         ### This duplicates the function of reweighting_functions.read_kints_segments locally but using the calc_hdx objects
-        _kint = runobj.rates
+        _kint = resultsobj.rates
         _kint = np.repeat(_kint[:, np.newaxis], len(self.runparams['times']), axis=1) * self.runparams['times']
 
         _exp_dfrac, _segments = analysisobj.expfracs, analysisobj.segres['segres']
 
         # convert expt to (segments, residues, times)
-        _exp_dfrac = _exp_dfrac[:, np.newaxis, :].repeat(_n_residues, axis=1)
+        _exp_dfrac = _exp_dfrac[:, np.newaxis, :].repeat(_nresidues, axis=1)
         # convert kint to (segments, residues, times)
         _kint = _kint[np.newaxis, :, :].repeat(len(_segments), axis=0)
 
@@ -230,7 +230,7 @@ class MaxEnt():
 
         assert all((_segfilters.shape == _exp_dfrac.shape,
                     _segfilters.shape == _kint.shape,
-                    _n_residues == len(_sorted_resids)))  # Check we've at least read in the right number!
+                    _nresidues == len(_sorted_resids)))  # Check we've at least read in the right number!
 
         print("Segments and experimental dfracs read from calc_hdx objects")
         _minuskt = -_kint
@@ -597,25 +597,25 @@ class MaxEnt():
         def update_sampled_totals(total_bc, total_bh, total_mse, total_resfracs, total_lambdas_bc, total_lambdas_bh):
             # Add current values of bc, bh, mse, residue fractions, lambdas to totals using a closure.
             def adding_function(bc, bh, mse, resfracs, lambdas):
-                # Creates function to add current values to totals
-                total_bc += bc
-                total_bh += bh
-                total_mse += mse
-                total_resfracs += resfracs
-                total_lambdas_bc += bc * lambdas
-                total_lambdas_bh += bh * lambdas
-                return total_bc, total_bh, total_mse, total_resfracs, total_lambdas_bc, total_lambdas_bh
+                # Creates function to add current values to totals. Closure must access nonlocal variables, can't just reassign with +=
+                new_bc = total_bc + bc
+                new_bh = total_bh + bh
+                new_mse = total_mse + mse
+                new_resfracs = total_resfracs + resfracs
+                new_lambdas_bc = total_lambdas_bc + (bc * lambdas)
+                new_lambdas_bh = total_lambdas_bh + (bh * lambdas)
+                return new_bc, new_bh, new_mse, new_resfracs, new_lambdas_bc, new_lambdas_bh
             return adding_function
 
         def update_sampled_totals_nolambda(total_bc, total_bh, total_mse, total_resfracs):
             # Add current values of bc, bh, mse, residue fractions to totals using a closure.
             def adding_function(bc, bh, mse, resfracs):
-                # Creates function to add current values to totals
-                total_bc += bc
-                total_bh += bh
-                total_mse += mse
-                total_resfracs += resfracs
-                return total_bc, total_bh, total_mse, total_resfracs
+                # Creates function to add current values to totals. Closure must access nonlocal variables, can't just reassign with +=
+                new_bc = total_bc + bc
+                new_bh = total_bh + bh
+                new_mse = total_mse + mse
+                new_resfracs = total_resfracs + resfracs
+                return new_bc, new_bh, new_mse, new_resfracs
             return adding_function
 
         def update_sampled_averages(total_bc, total_bh, total_mse, total_resfracs, total_lambdas_bc, total_lambdas_bh):
@@ -655,7 +655,7 @@ class MaxEnt():
         self.mcsamplvalues['MC_resfracs_ave'] = self.runvalues['curr_residue_dfracs']
         curr_radou_bh = self.methodparams['radou_bh']
         curr_radou_bc = self.methodparams['radou_bc']
-
+        #embed()
         ### Start of main sampling loop
         for curr_mc_iter in range(self.methodparams['param_maxiters']):
             # 1) Make move in betas and recalculate protection factors & deuterated fractions
@@ -697,15 +697,13 @@ class MaxEnt():
             if self.methodparams['do_reweight']:
                 curr_lambdas = self.calc_lambdas()
                 if curr_mc_iter == 0:
-                    add_to_totals = update_sampled_totals(0, 0, 0, 0, 0, 0)
-                else:
-                    add_to_totals = update_sampled_totals(radou_bc_sum, radou_bh_sum, MSE_sum, residue_dfracs_sum, lambdas_bc_sum, lambdas_bh_sum)
+                    radou_bc_sum, radou_bh_sum, MSE_sum, residue_dfracs_sum, lambdas_bc_sum, lambdas_bh_sum = 0, 0, 0, 0, 0, 0
+                add_to_totals = update_sampled_totals(radou_bc_sum, radou_bh_sum, MSE_sum, residue_dfracs_sum, lambdas_bc_sum, lambdas_bh_sum)
                 radou_bc_sum, radou_bh_sum, MSE_sum, residue_dfracs_sum, lambdas_bc_sum, lambdas_bh_sum = add_to_totals(curr_radou_bc, curr_radou_bh, self.runvalues['curr_MSE'], self.runvalues['curr_residue_dfracs'], curr_lambdas)
             else:
                 if curr_mc_iter == 0:
-                    add_to_totals = update_sampled_totals_nolambda(0, 0, 0, 0)
-                else:
-                    add_to_totals = update_sampled_totals_nolambda(radou_bc_sum, radou_bh_sum, MSE_sum, residue_dfracs_sum)
+                    radou_bc_sum, radou_bh_sum, MSE_sum, residue_dfracs_sum = 0, 0, 0, 0
+                add_to_totals = update_sampled_totals_nolambda(radou_bc_sum, radou_bh_sum, MSE_sum, residue_dfracs_sum)
                 radou_bc_sum, radou_bh_sum, MSE_sum, residue_dfracs_sum = add_to_totals(curr_radou_bc, curr_radou_bh, self.runvalues['curr_MSE'], self.runvalues['curr_residue_dfracs'])
             ### End of main sampling loop
 
@@ -718,13 +716,13 @@ class MaxEnt():
 
         # Finally, update the main dictionaries with averages of Bh, Bc, MSE, lambda etc, applying a scaling factor for the initial equilibration period if desired
         self.methodparams['radou_bh'] = self.methodparams['radou_bh'] * (1.0 - self.mcsamplvalues['smoothing_rate']) + \
-                                        self.mcsamplvalues['smoothing_rate'] * (radou_bh_ave / self.methodparams['param_maxiters'])
+                                        self.mcsamplvalues['smoothing_rate'] * radou_bh_ave
         self.methodparams['radou_bc'] = self.methodparams['radou_bc'] * (1.0 - self.mcsamplvalues['smoothing_rate']) + \
-                                        self.mcsamplvalues['smoothing_rate'] * (radou_bc_ave / self.methodparams['param_maxiters'])
+                                        self.mcsamplvalues['smoothing_rate'] * radou_bc_ave
         self.mcsamplvalues['MC_MSE_ave'] = self.mcsamplvalues['MC_MSE_ave'] * (1.0 - self.mcsamplvalues['smoothing_rate']) + \
-                                           self.mcsamplvalues['smoothing_rate'] * (MSE_ave / self.methodparams['param_maxiters'])
+                                           self.mcsamplvalues['smoothing_rate'] * MSE_ave
         self.mcsamplvalues['MC_resfracs_ave'] = self.mcsamplvalues['MC_resfracs_ave'] * (1.0 - self.mcsamplvalues['smoothing_rate']) + \
-                                           self.mcsamplvalues['smoothing_rate'] * (residue_dfracs_ave / self.methodparams['param_maxiters']) # Not currently used but could be - average of residue fractions
+                                           self.mcsamplvalues['smoothing_rate'] * residue_dfracs_ave  # Not currently used but could be - average of residue fractions
 
         # Update lambdas using final Bh & Bc values if desired
         if self.methodparams['do_reweight']:
@@ -818,6 +816,7 @@ class MaxEnt():
 
         # Update predicted values
         self.update_lnpi_and_weights()
+        #print(self.runvalues['lnpi'])
         self.update_dfracs_and_mse()
         self.update_work()
 
