@@ -29,7 +29,7 @@ def strip_filename(filename, prefix):
         return int(_.split(".")[0])
     except:
         raise NameError("Unable to read residue number from Contacts/Hbonds file: %s.\n"
-                        "Failed attempting to convert %s to resudue number.\n"
+                        "Failed attempting to convert %s to residue number.\n"
                         "Perhaps your file prefix is incorrect?\n"
                         "Current prefix: %s" % (filename, _, prefix))
 
@@ -172,7 +172,7 @@ def read_kints_segments(kintfile, expt_path, n_res, times, sorted_resids):
     return -kint, exp_dfrac, segfilters # Returns minuskt
 
 # Functions for MC optimisation & sampling
-def generate_trial_betas(bc, bh, bcrange, bhrange, step_multiplier):
+def generate_trial_betas(bc, bh, bcrange, bhrange, step_multiplier, random_state_debug_value=None):
     """Generate trial beta values for an MC move. Move sizes are scaled by the 'step_multiplier' argument,
        and individually by the 'bcrange' or 'bhrange' arguments for the beta_c and beta_h values respectively.
        Negative beta values are not allowed; moves resulting in negative values will be resampled.
@@ -183,13 +183,28 @@ def generate_trial_betas(bc, bh, bcrange, bhrange, step_multiplier):
 
        Returns: trial_bc, trial_bh
        """
+    # Data cleanup, just in case
+    try:
+        assert bc >= 0
+    except AssertionError:
+        print("Warning: Negative value of beta_C detected in MC sampling. Resetting to 0")
+        bc = 0
+    try:
+        assert bh >= 0
+    except AssertionError:
+        print("Warning: Negative value of beta_H detected in MC sampling. Resetting to 0")
+        bh = 0
+
     # Make move in betas scaled by step size and desired 'range' of sampling. -ve beta values are not allowed
     trial_radou_bh, trial_radou_bc = -1, -1
+    # Note that this regenerates the numpy random state from /dev/urandom
+    # or the clock if random_state_debug_value is not set
+    state = np.random.RandomState(random_state_debug_value)
     while trial_radou_bh < 0:
-        trial_radou_bh = bh + ((np.random.random_sample()) - 0.5) \
+        trial_radou_bh = bh + ((state.random_sample()) - 0.5) \
                          * step_multiplier * bhrange
     while trial_radou_bc < 0:
-        trial_radou_bc = bc + ((np.random.random_sample()) - 0.5) \
+        trial_radou_bc = bc + ((state.random_sample()) - 0.5) \
                          * step_multiplier * bcrange
     return trial_radou_bc, trial_radou_bh
 
@@ -242,7 +257,6 @@ def calc_trial_dfracs(ave_lnpi, segment_filters, filtered_minuskt, filtered_exp_
 def calc_work(init_lnpi, lambdas, weights, kT):
     """Calculate apparent work from the provided values of:
        init_lnpi : np.array[n_residues, n_frames] of ln(protection_factor), on a by-residue & by-frame basis
-       #weighted_lnpi : np.array[n_segments, n_residues, n_times] of weighted-average ln(protection_factor) across all frames
        lambdas : np.array[n_residues] of lambda values for each residue
        weights : np.array[n_frames] of current weights for each frame (should sum to 1)
        kT : value of kT for calculating work. Will determine units of the returned apparent work value.
