@@ -6,7 +6,7 @@ Unit and regression test for the HDXer package.
 from HDXer import reweighting
 import numpy as np
 import pytest
-import sys, os
+import sys, os, filecmp
 
 def test_reweight_initialize():
     """Tests the initialization and method parameters of a
@@ -77,6 +77,7 @@ def test_reweight_data_io_1():
     
 
 
+    test_prefix = 'HDXer/tests/data/tmp_test_output/tmp_'
     test_folders = [ 'HDXer/tests/data/reweighting_1' ]
     test_kint_file = os.path.join('HDXer/tests/data/reweighting_1', 'intrinsic_rates.dat')
     test_exp_file = os.path.join('HDXer/tests/data/reweighting_1', 'experimental_data.dat')
@@ -87,7 +88,8 @@ def test_reweight_data_io_1():
                         'data_folders' : test_folders,
                         'kint_file' : test_kint_file,
                         'exp_file' : test_exp_file,
-                        'times' : test_times }
+                        'times' : test_times,
+                        'out_prefix' : test_prefix}
 
 
     test_obj = reweighting.MaxEnt()
@@ -137,6 +139,7 @@ def test_update_lnpi_1():
 
 
 
+    test_prefix = 'HDXer/tests/data/tmp_test_output/tmp_'
     test_folders = [ 'HDXer/tests/data/reweighting_1' ]
     test_kint_file = os.path.join('HDXer/tests/data/reweighting_1', 'intrinsic_rates.dat')
     test_exp_file = os.path.join('HDXer/tests/data/reweighting_1', 'experimental_data.dat')
@@ -148,7 +151,8 @@ def test_update_lnpi_1():
                         'data_folders' : test_folders,
                         'kint_file' : test_kint_file,
                         'exp_file' : test_exp_file,
-                        'times' : test_times }
+                        'times' : test_times,
+                        'out_prefix' : test_prefix }
 
 
     test_obj = reweighting.MaxEnt()
@@ -173,6 +177,7 @@ def test_update_lnpi_1():
 def test_update_lnpi_2():
     """Test that weights are calculated correctly with provided lambdas"""
 
+    test_prefix = 'HDXer/tests/data/tmp_test_output/tmp_'
     test_folders = [ 'HDXer/tests/data/reweighting_1' ]
     test_kint_file = os.path.join('HDXer/tests/data/reweighting_1', 'intrinsic_rates.dat')
     test_exp_file = os.path.join('HDXer/tests/data/reweighting_1', 'experimental_data.dat')
@@ -184,7 +189,8 @@ def test_update_lnpi_2():
                         'data_folders' : test_folders,
                         'kint_file' : test_kint_file,
                         'exp_file' : test_exp_file,
-                        'times' : test_times }
+                        'times' : test_times, 
+                        'out_prefix' : test_prefix }
     test_methodparam_dict = { 'radou_bc' : 0.25,
                               'radou_bh' : 5.25 }
     test_obj = reweighting.MaxEnt(**test_methodparam_dict)
@@ -250,3 +256,155 @@ def test_update_lnpi_2():
     assert np.allclose(test_obj.runvalues['ave_lnpi'], expected_avelnpi_newbetas)
     assert np.allclose(test_obj.runvalues['currweights'], expected_currweights)
     assert np.isclose(np.sum(test_obj.runvalues['currweights']), 1.0)
+
+
+def test_optimize_parameters_gradient():
+    """Test that beta_c and beta_h parameters are optimized correctly
+       with the gradient-descent protocol"""
+
+    test_prefix = 'HDXer/tests/data/tmp_test_output/tmp_'
+    test_obj = reweighting.MaxEnt(do_reweight=False)
+    test_folders = [ 'HDXer/tests/data/reweighting_1' ]
+    test_kint_file = os.path.join('HDXer/tests/data/reweighting_1', 'intrinsic_rates.dat')
+    # Residue-based, calculated with Bc = 0.25, Bh = 5.25
+    test_exp_file = os.path.join('HDXer/tests/data/reweighting_3', 'experimental_data_new_params.dat')
+    test_contacts_prefix = 'Contacts_chain_0_res_'
+    test_hbonds_prefix = 'Hbonds_chain_0_res_'
+    test_times = np.array([0.5, 5.0, 60.0])
+    test_param_dict = { 'hbonds_prefix' : test_hbonds_prefix,
+                        'contacts_prefix' : test_contacts_prefix,
+                        'data_folders' : test_folders,
+                        'kint_file' : test_kint_file,
+                        'exp_file' : test_exp_file,
+                        'times' : test_times, 
+                        'out_prefix' : test_prefix }
+
+
+    test_obj = reweighting.MaxEnt(param_maxiters=10000)
+    test_obj.set_run_params(10**-2, None, None, None, test_param_dict)
+    test_obj.setup_no_runobj(test_obj.runparams['data_folders'],
+                             test_obj.runparams['kint_file'],
+                             test_obj.runparams['exp_file'],
+                             test_obj.runparams['times'])
+    # Set initial values of lnpi etc. using data read in
+    test_obj.update_lnpi_and_weights()
+    test_obj.update_dfracs_and_mse()
+
+    # Calculated with Bc = 0.25, Bh = 5.25
+    expected_bc, expected_bh = 0.25, 5.25
+
+    test_obj.optimize_parameters_gradient()
+    out_bc = test_obj.methodparams['radou_bc']
+    out_bh = test_obj.methodparams['radou_bh']
+    out_mse = test_obj.runvalues['curr_MSE']
+
+    assert np.isclose(out_bc, expected_bc)
+    assert np.isclose(out_bh, expected_bh)
+    assert np.isclose(out_mse, 0.0)
+
+
+def test_run_no_reweight_1():
+    """Tests that output files are created correctly using file comparisons"""
+
+
+    test_obj = reweighting.MaxEnt(do_reweight=False)
+    test_prefix = 'HDXer/tests/data/tmp_test_output/test_run_no_reweight_'
+    reference_prefix = 'HDXer/tests/data/reweighting_1/reference_run_no_reweight_'
+    test_folders = [ 'HDXer/tests/data/reweighting_1' ]
+    test_kint_file = os.path.join('HDXer/tests/data/reweighting_1', 'intrinsic_rates.dat')
+    test_exp_file = os.path.join('HDXer/tests/data/reweighting_1', 'experimental_data.dat')
+    test_contacts_prefix = 'Contacts_chain_0_res_'
+    test_hbonds_prefix = 'Hbonds_chain_0_res_'
+    test_times = np.array([0.5, 5.0, 60.0])
+    test_param_dict = { 'hbonds_prefix' : test_hbonds_prefix,
+                        'contacts_prefix' : test_contacts_prefix,
+                        'data_folders' : test_folders,
+                        'kint_file' : test_kint_file,
+                        'exp_file' : test_exp_file,
+                        'times' : test_times,
+                        'out_prefix' : test_prefix }
+
+
+    test_obj.run(gamma=10**-2, **test_param_dict)
+    test_suffixes = ['final_segment_fractions.dat', 'final_weights.dat',
+                     'initial_params.dat', 'per_iteration_output.dat',
+                     'per_restart_output.dat', 'work.dat' ]
+    test_files = [ test_prefix + f for f in test_suffixes ] 
+    expected_files = [ reference_prefix + f for f in test_suffixes ] 
+
+    # compare file contents with filecmp
+    for out_file, expected_file in zip(test_files, expected_files):
+        assert filecmp.cmp(out_file, expected_file, shallow=False)
+
+
+def test_run_partial_reweight_4():
+    """Tests that output files are created correctly using file comparisons.
+       Partial reweight (50 iterations) of experimental data"""
+
+
+    test_obj = reweighting.MaxEnt(do_reweight=True, maxiters=50)
+    test_prefix = 'HDXer/tests/data/tmp_test_output/test_run_partial_reweight_'
+    reference_prefix = 'HDXer/tests/data/reweighting_4/reference_run_partial_reweight_'
+    test_folders = [ 'HDXer/tests/data/reweighting_4' ]
+    test_kint_file = os.path.join('HDXer/tests/data/reweighting_4', 'intrinsic_rates.dat')
+    test_exp_file = os.path.join('HDXer/tests/data/reweighting_4', 'experimental_data.dat')
+    test_contacts_prefix = 'Contacts_chain_0_res_'
+    test_hbonds_prefix = 'Hbonds_chain_0_res_'
+    test_times = np.array([5.0, 30.0])
+    test_param_dict = { 'hbonds_prefix' : test_hbonds_prefix,
+                        'contacts_prefix' : test_contacts_prefix,
+                        'data_folders' : test_folders,
+                        'kint_file' : test_kint_file,
+                        'exp_file' : test_exp_file,
+                        'times' : test_times,
+                        'out_prefix' : test_prefix,
+                        'stepfactor' : 10**-5 }
+
+
+    test_obj.run(gamma=10**-2, **test_param_dict)
+    test_suffixes = ['final_segment_fractions.dat', 'final_weights.dat',
+                     'initial_params.dat', 'per_iteration_output.dat',
+                     'per_restart_output.dat', 'work.dat' ]
+    test_files = [ test_prefix + f for f in test_suffixes ] 
+    expected_files = [ reference_prefix + f for f in test_suffixes ] 
+
+    # compare file contents with filecmp
+    for out_file, expected_file in zip(test_files, expected_files):
+        assert filecmp.cmp(out_file, expected_file, shallow=False)
+
+def test_run_full_reweight_4():
+    """Tests that output files are created correctly using file comparisons.
+       Full reweight of experimental data"""
+
+
+    test_obj = reweighting.MaxEnt(do_reweight=True)
+    test_prefix = 'HDXer/tests/data/tmp_test_output/test_run_full_reweight_'
+    reference_prefix = 'HDXer/tests/data/reweighting_4/reference_run_full_reweight_'
+    test_folders = [ 'HDXer/tests/data/reweighting_4' ]
+    test_kint_file = os.path.join('HDXer/tests/data/reweighting_4', 'intrinsic_rates.dat')
+    test_exp_file = os.path.join('HDXer/tests/data/reweighting_4', 'experimental_data.dat')
+    test_contacts_prefix = 'Contacts_chain_0_res_'
+    test_hbonds_prefix = 'Hbonds_chain_0_res_'
+    test_times = np.array([5.0, 30.0])
+    test_restart = 50
+    test_param_dict = { 'hbonds_prefix' : test_hbonds_prefix,
+                        'contacts_prefix' : test_contacts_prefix,
+                        'data_folders' : test_folders,
+                        'kint_file' : test_kint_file,
+                        'exp_file' : test_exp_file,
+                        'times' : test_times,
+                        'out_prefix' : test_prefix,
+                        'stepfactor' : 10**-5,
+                        'restart_interval' : test_restart }
+
+
+    test_obj.run(gamma=10**-2, **test_param_dict)
+    test_suffixes = ['final_segment_fractions.dat', 'final_weights.dat',
+                     'initial_params.dat', 'per_iteration_output.dat',
+                     'per_restart_output.dat', 'work.dat' ]
+    test_files = [ test_prefix + f for f in test_suffixes ] 
+    expected_files = [ reference_prefix + f for f in test_suffixes ] 
+
+    # compare file contents with filecmp
+    for out_file, expected_file in zip(test_files, expected_files):
+        assert filecmp.cmp(out_file, expected_file, shallow=False)

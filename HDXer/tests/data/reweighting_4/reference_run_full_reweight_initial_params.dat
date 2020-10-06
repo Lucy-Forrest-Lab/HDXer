@@ -1,0 +1,2 @@
+Temp, kT, Convergence criterion, Beta_C, Beta_H, Gamma, Update rate (step size) factor, N frames
+300.0,  2.494, 1.00e-10,  0.35,  2.00, 1.0000e-02, 0.000010, 401

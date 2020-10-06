@@ -816,7 +816,6 @@ class MaxEnt():
 
         # Update predicted values
         self.update_lnpi_and_weights()
-        #print(self.runvalues['lnpi'])
         self.update_dfracs_and_mse()
         self.update_work()
 
@@ -899,7 +898,10 @@ class MaxEnt():
         try:
             _ = self.runparams['restart_interval']
         except KeyError:
-            self.runparams['restart_interval'] = int(self.methodparams['maxiters'] / 1000) # Max of 1000 restarts by default
+            if self.methodparams['maxiters'] > 1000:
+                self.runparams['restart_interval'] = int(self.methodparams['maxiters'] / 1000) # Max of 1000 restarts by default
+            else:
+                self.runparams['restart_interval'] = self.methodparams['maxiters']
         # Do iterations until EITHER maxiters reached or convergence
         while self.runvalues['curriter'] <= self.methodparams['maxiters'] and self.runvalues['is_converged'] == False:
             self.make_iteration()
