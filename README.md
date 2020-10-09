@@ -86,7 +86,7 @@ Once the *HDXer* Python package is downloaded, create a new conda environment th
 
 ```bash
 cd HDXer
-conda create -f HDXER_ENV.yml
+conda env create -f HDXER_ENV.yml
 ```
 
 Every time you use *HDXer*, you have to activate the *HDXER_ENV* using conda activate.
@@ -95,12 +95,21 @@ Every time you use *HDXer*, you have to activate the *HDXER_ENV* using conda act
 conda activate HDXER_ENV
 ```
 
-Within the *HDXER_ENV* environment, you have all the dependencies available to install the *HDXer* Python package to your Python environment.
+Within the *HDXER_ENV* environment, you have all the dependencies available to install the *HDXer* Python package to your Python environment. While *HDXer* is in development, please install the package in 'editable' mode, using either pip:
 
 ```bash
 cd ..
 pip install -e HDXer
 ```
+
+or conda:
+
+```bash
+cd ..
+conda develop HDXer
+```
+
+Installing in 'editable' mode will allow you to pull updates directly from this Github repository to your local *HDXer* installation, without having to reinstall the package.
 
 Now, you finished installing the *HDXer* Python package. Let's add the path to the *HDXer* directory as in your *.bashrc* and/or *.bash_profile*. The *HDXer* directory you are in will be used throughout the protocol referred as \$HDXER_PATH.
 

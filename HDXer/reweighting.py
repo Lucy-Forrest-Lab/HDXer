@@ -868,7 +868,31 @@ class MaxEnt():
             pickle.dump(self.__dict__, fpkl, protocol=-1) # -1 for size purposes
 
     def run(self, gamma=10**-2, resultsobj=None, analysisobj=None, restart=None, **run_params):
-        """Set up and perform a reweighting run"""
+        """Set up and perform a reweighting run.
+        
+            A reweighting run can be started in one of three ways, depending on the 
+            arguments provided:
+
+            1) Start a new run from scratch, reading input data from specified files
+               Arguments required: 
+                   data_folders : A list of folder paths containing 'Contacts_' and 'Hbond_' files
+                                  for the initial structural ensemble
+                   kint_file    : Path to a file containing intrinsic rates for each residue in the protein
+                   exp_file     : Path to a file containing target (experimental) deuterated fractions
+                   times        : List of deuteration timepoints in minutes, corresponding to the target 
+                                  (experimental) data
+                                  
+            2) Start a new run from scratch, reading input data from calc_hdx objects
+               Arguments required:
+                   resultsobj   : A complete HDXer.methods.Radou object, containing contacts, Hbonds,
+                                  rates etc. attributes for the initial structural ensemble
+                   analysisobj  : A complete HDXer.analysis.Analysis object, containing target
+                                  (experimental) data etc. for the system of interest
+                                  
+            3) Restart a run that is alrady partially complete
+               Arguments required:
+                   restart      : Path to a HDXer.reweighting restart file, with '.pkl' suffix"""
+
         # 0) Set basic parameters
         self.set_run_params(gamma, resultsobj, analysisobj, restart, run_params)
 
