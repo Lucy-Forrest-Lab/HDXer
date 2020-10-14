@@ -137,6 +137,8 @@ In the *notebooks/* directory, there are five Jupyter notebooks.
 
 These notebooks will walk you through how to run ***HDXer*** and to analyze the results with an example.
 
+---
+
 ### Copyright
 
 Copyright (c) 2020, Richard T. Bradshaw, Fabrizio Marinelli
