@@ -5,13 +5,9 @@ HDXer
 [![AppVeyor Build status](https://ci.appveyor.com/api/projects/status/REPLACE_WITH_APPVEYOR_LINK/branch/master?svg=true)](https://ci.appveyor.com/project/rtb1c13/HDXer/branch/master)
 [![codecov](https://codecov.io/gh/rtb1c13/HDXer/branch/master/graph/badge.svg)](https://codecov.io/gh/rtb1c13/HDXer/branch/master)
 
-HDXer is a package to predict Hydrogen-Deuterium exchange data from biomolecular simulations, compare to experiment, and perform ensemble refinement to fit a structural ensemble to the experimental data.
-
----
-
 ## **Introduction**
 
-***HDXer*** is composed of two Python 3 packages (***calc_hdx*** and ***ensemble_modeling***). The first Python package, ***calc_hdx***, predicts HDX deuterated fractions from structural ensembles (e.g. molecular dynamics). The subsequent Python package, ***ensemble_modeling***, applies maximum-entropy bias to the structural ensembles in order to reweight the ensembles to match up with experimental HDX-MS data.
+***HDXer*** is a Python pacakge to predict Hydrogen-Deuterium exchange (HDX) data from structural ensembles (e.g. molecular dynamics simulations) and apply maximum-entropy bias to the structural ensembles in order to reweight the ensembles to match up with experimental HDX data.
 
 ---
 
@@ -120,7 +116,11 @@ cd $HDXER_PATH
 
 ## **Protocol**
 
+<<<<<<< HEAD
+The protocol for ***HDXer*** is available in a series of easy to follow Jupyter notebooks. These notebooks can be accessed within the [GitHub page](https://github.com/TMB-CSB/HDXer/tree/master/protocol) or with Jupyter Lab. You will be able to run code interactively within each notebook using Jupyter Lab. Run the following commands on terminal to access the notebooks using Jupyter Lab:
+=======
 The protocol for ***HDXer*** is available in a series of easy-to-follow Jupyter notebooks. These notebooks can be accessed within the [GitHub page](https://github.com/rtb1c13/ensemble_modeling/tree/master/protocol) or with Jupyter Lab. You will be able to run code interactively within each notebook using Jupyter Lab. Run the following commands on your terminal to access the notebooks using Jupyter Lab:
+>>>>>>> 8a3cbbce31b707b449b5651b190afc375d85bfab
 
 ```bash
 cd $HDXER_PATH/protocol/notebooks
@@ -131,7 +131,7 @@ In the *notebooks/* directory, there are five Jupyter notebooks.
 
 - 01_data_prep.ipynb
 - 02_calc_hdx.ipynb
-- 03_ensemble_modeling.ipynb
+- 03_reweighting.ipynb
 - 04_decision_plot.ipynb
 - 05_heatmap.ipynb
 

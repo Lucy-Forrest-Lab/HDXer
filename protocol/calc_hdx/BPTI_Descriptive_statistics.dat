@@ -1,0 +1,15 @@
+# Pearson's R correlation, Times / min: 0.167 1.0 10.0 120.0
+0.619568
+0.691414
+0.756148
+0.707068
+# Mean signed error / frac, Pred. - Expt., Times / min: 0.167 1.0 10.0 120.0
+-0.09472556
+-0.03640313
+0.01578550
+0.04535421
+# Mean unsigned error / frac, Pred. - Expt., Times / min: 0.167 1.0 10.0 120.0
+0.20763057
+0.20092955
+0.15929470
+0.14204573
