@@ -117,9 +117,6 @@ cd $HDXER_PATH
 ## **Protocol**
 
 The protocol for ***HDXer*** is available in a series of easy to follow Jupyter notebooks. These notebooks can be accessed within the [GitHub page](https://github.com/TMB-CSB/HDXer/tree/master/protocol) or with Jupyter Lab. You will be able to run code interactively within each notebook using Jupyter Lab. Run the following commands on terminal to access the notebooks using Jupyter Lab:
-=======
-The protocol for ***HDXer*** is available in a series of easy-to-follow Jupyter notebooks. These notebooks can be accessed within the [GitHub page](https://github.com/rtb1c13/ensemble_modeling/tree/master/protocol) or with Jupyter Lab. You will be able to run code interactively within each notebook using Jupyter Lab. Run the following commands on your terminal to access the notebooks using Jupyter Lab:
->>>>>>> 8a3cbbce31b707b449b5651b190afc375d85bfab
 
 ```bash
 cd $HDXER_PATH/protocol/notebooks
