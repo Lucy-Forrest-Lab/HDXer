@@ -1,8 +1,3 @@
----
-layout: page
-title: HDXer
----
-
 ## Welcome to the HDXer homepage
 
 HDXer is a Python package to predict Hydrogen-Deuterium exchange data from biomolecular simulations, compare to experiment, and perform ensemble refinement to fit a simulated structural ensemble to the experimental data.
