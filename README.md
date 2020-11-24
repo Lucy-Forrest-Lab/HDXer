@@ -97,12 +97,13 @@ Now, you finished installing the *HDXer* Python package. Let's add the path to t
 
 ```bash
 cd HDXer
-echo -e "\nexport HDXER_PATH='${PWD}'" >> ~/.bashrc
-source ~/.bashrc
-```
 
-```bash
-echo -e "\nexport HDXER_PATH='${PWD}'" >> ~/.bash_profile
+echo -e "\nexport HDXER_PATH='${PWD}'" >| ~/.HDXER_PATH_variable
+
+grep -qxF "if [ -f ~/.HDXER_PATH_variable ]; then source ~/.HDXER_PATH_variable; fi" ~/.bashrc || echo -e "if [ -f ~/.HDXER_PATH_variable ]; then source ~/.HDXER_PATH_variable; fi" >> ~/.bashrc
+source ~/.bashrc
+
+grep -qxF "if [ -f ~/.HDXER_PATH_variable ]; then source ~/.HDXER_PATH_variable; fi" ~/.bash_profile || echo -e "if [ -f ~/.HDXER_PATH_variable ]; then source ~/.HDXER_PATH_variable; fi" >> ~/.bash_profile
 source ~/.bash_profile
 ```
 
