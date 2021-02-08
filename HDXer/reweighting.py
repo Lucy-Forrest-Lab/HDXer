@@ -28,10 +28,10 @@ class MaxEnt():
                do_mcsampl (False) : Flag to turn on a Monte Carlo sampling of model parameters, rather than a minimisation
                mc_refvar (0.03) : Reference variance of the MC sampling distribution (~estimated error on deuterated fractions)
                mc_equilsteps (-1) : Equilibration steps and subsequent smoothing (as 1/sqrt(number of steps)) for the initial stage of MC sampling. Default value (-1) switches off equilibration
-               radou_bc (0.35) : Initial value of beta_C for the Radou-style HDX forward model
-               radou_bh (2.00) : Initial value of beta_H for the Radou-style HDX forward model
-               radou_bcrange (1.5) : Initial range (affects model parameter step size) for the beta_C parameter for MC minimization
-               radou_bhrange (16.0) : Initial range (affects model parameter step size) for the beta_H parameter for MC minimization
+               bv_bc (0.35) : Initial value of beta_C for the Best/Vendruscolo-style HDX forward model
+               bv_bh (2.00) : Initial value of beta_H for the Best/Vendruscolo-style HDX forward model
+               bv_bcrange (1.5) : Initial range (affects model parameter step size) for the beta_C parameter for MC minimization
+               bv_bhrange (16.0) : Initial range (affects model parameter step size) for the beta_H parameter for MC minimization
                tolerance (10**-10) : Convergence criterion for reweighting, taken as: ( sum(abs(lambdas_new) - sum(abs(lambdas_old)) ) / sum(abs(lambdas_new))
                maxiters (10**6) : Maximum number of iterations for reweighting
                param_maxiters (10**2) : Maximum number of iterations for model parameter minimisation
@@ -47,10 +47,10 @@ class MaxEnt():
                          'do_mcsampl' : False,
                          'mc_refvar' : 0.03,
                          'mc_equilsteps' : -1,
-                         'radou_bc' : 0.35,
-                         'radou_bh' : 2.00,
-                         'radou_bcrange' : 1.5,
-                         'radou_bhrange' : 16.0,
+                         'bv_bc' : 0.35,
+                         'bv_bh' : 2.00,
+                         'bv_bcrange' : 1.5,
+                         'bv_bhrange' : 16.0,
                          'tolerance' : 10**-10,
                          'maxiters' : 10**6,
                          'param_maxiters' : 10**2,
@@ -123,8 +123,8 @@ class MaxEnt():
                     % (self.methodparams['temp'],
                        self.methodparams['kT'],
                        self.methodparams['tolerance'],
-                       self.methodparams['radou_bc'],
-                       self.methodparams['radou_bh'],
+                       self.methodparams['bv_bc'],
+                       self.methodparams['bv_bh'],
                        self.runparams['gamma'],
                        self.methodparams['stepfactor'],
                        _nframes))
@@ -265,8 +265,8 @@ class MaxEnt():
                     % (self.methodparams['temp'],
                        self.methodparams['kT'],
                        self.methodparams['tolerance'],
-                       self.methodparams['radou_bc'],
-                       self.methodparams['radou_bh'],
+                       self.methodparams['bv_bc'],
+                       self.methodparams['bv_bh'],
                        self.runparams['gamma'],
                        self.methodparams['stepfactor'],
                        _nframes))
@@ -339,8 +339,8 @@ class MaxEnt():
                     % (self.methodparams['temp'],
                        self.methodparams['kT'],
                        self.methodparams['tolerance'],
-                       self.methodparams['radou_bc'],
-                       self.methodparams['radou_bh'],
+                       self.methodparams['bv_bc'],
+                       self.methodparams['bv_bh'],
                        self.runparams['gamma'],
                        self.methodparams['stepfactor'],
                        self.runvalues['contacts'].shape[1]))
@@ -372,10 +372,10 @@ class MaxEnt():
                 self.runparams['times'] = analysisobj.params['times']
                 return
             else:
-                raise HDX_Error("You've supplied a Radou results object from calc_hdx but not an Analysis object.\n"
+                raise HDX_Error("You've supplied a BV results object from calc_hdx but not an Analysis object.\n"
                                 "Both are required if you wish to continue a calc_hdx run.")
         if analysisobj is not None:
-            raise HDX_Error("You've supplied an Analysis object from calc_hdx but not a Radou results object.\n"
+            raise HDX_Error("You've supplied an Analysis object from calc_hdx but not a BV results object.\n"
                             "Both are required if you wish to continue a calc_hdx run.")
 
         self.runparams['from_calchdx'] = False
@@ -403,8 +403,8 @@ class MaxEnt():
 
            Updates 'lnpi', 'avelnpi' and 'currweights' entries in the MaxEnt.runvalues dictionary"""
 
-        _contacts = self.methodparams['radou_bc'] * self.runvalues['contacts']
-        _hbonds = self.methodparams['radou_bh'] * self.runvalues['hbonds']
+        _contacts = self.methodparams['bv_bc'] * self.runvalues['contacts']
+        _hbonds = self.methodparams['bv_bh'] * self.runvalues['hbonds']
         self.runvalues['lnpi'] = _hbonds + _contacts
 
         # Calculate by-frame bias from lambda values (per residue) and contacts/hbonds (per residue and frame)
@@ -476,7 +476,7 @@ class MaxEnt():
         """Minimize beta parameters using an MC protocol. Beta parameter moves are accepted if they reduce mean
            square error to the target data.
 
-           Each step of minimization updates the values of 'radou_bc' and 'radou_bh' in the
+           Each step of minimization updates the values of 'bv_bc' and 'bv_bh' in the
            MaxEnt.methodparams dictionary, and 'ave_lnpi', 'curr_residue_dfracs', 'curr_segment_dfracs', and
            'curr_MSE' in the MaxEnt.runvalues dictionary. Steps can be controlled with the 'param_maxiters'
            entry in the MaxEnt.methodparams dictionary"""
@@ -487,13 +487,13 @@ class MaxEnt():
 
         # Then do MC-based minimization
         for curr_mc_iter in range(self.methodparams['param_maxiters']):
-            curr_radou_bc = self.methodparams['radou_bc']
-            curr_radou_bh = self.methodparams['radou_bh']
-            trial_radou_bc, trial_radou_bh = generate_trial_betas(curr_radou_bc, curr_radou_bh,
-                                                                  self.methodparams['radou_bcrange'],
-                                                                  self.methodparams['radou_bhrange'],
+            curr_bv_bc = self.methodparams['bv_bc']
+            curr_bv_bh = self.methodparams['bv_bh']
+            trial_bv_bc, trial_bv_bh = generate_trial_betas(curr_bv_bc, curr_bv_bh,
+                                                                  self.methodparams['bv_bcrange'],
+                                                                  self.methodparams['bv_bhrange'],
                                                                   self.methodparams['param_stepfactor'])
-            trial_ave_lnpi = calc_trial_ave_lnpi(_ave_contacts, _ave_hbonds, trial_radou_bc, trial_radou_bh,
+            trial_ave_lnpi = calc_trial_ave_lnpi(_ave_contacts, _ave_hbonds, trial_bv_bc, trial_bv_bh,
                                                  len(self.runparams['times']), self.runvalues['n_segs'])
             trial_residue_dfracs, trial_segment_dfracs, trial_MSE = calc_trial_dfracs(trial_ave_lnpi,
                                                                                       self.runvalues['segfilters'],
@@ -502,8 +502,8 @@ class MaxEnt():
                                                                                       self.runvalues['n_datapoints'])
 
             if trial_MSE < self.runvalues['curr_MSE']:
-                self.methodparams['radou_bc'] = trial_radou_bc
-                self.methodparams['radou_bh'] = trial_radou_bh
+                self.methodparams['bv_bc'] = trial_bv_bc
+                self.methodparams['bv_bh'] = trial_bv_bh
                 self.runvalues['curr_MSE'] = trial_MSE
                 self.runvalues['ave_lnpi'] = trial_ave_lnpi
                 self.runvalues['curr_segment_dfracs'] = trial_segment_dfracs
@@ -512,7 +512,7 @@ class MaxEnt():
     def optimize_parameters_gradient(self):
         """Minimize beta parameters using a gradient descent protocol.
 
-           Each step of minimization updates the values of 'radou_bc' and 'radou_bh' in the
+           Each step of minimization updates the values of 'bv_bc' and 'bv_bh' in the
            MaxEnt.methodparams dictionary, and 'ave_lnpi', 'curr_residue_dfracs', 'curr_segment_dfracs', and
            'curr_MSE' in the MaxEnt.runvalues dictionary. Steps and convergence can be controlled with the
            'param_maxiters' and 'tolerance' entries in the MaxEnt.methodparams dictionary"""
@@ -554,20 +554,20 @@ class MaxEnt():
             # now update the parameters
             delta_bh = np.abs(der_bh / np.abs(secder_bh))
             delta_bc = np.abs(der_bc / np.abs(secder_bc))
-            if delta_bh / np.abs(self.methodparams['radou_bh']) > self.methodparams['param_stepfactor']: # Scale steps if they're too large
-                self.methodparams['radou_bh'] = np.abs(self.methodparams['radou_bh']
+            if delta_bh / np.abs(self.methodparams['bv_bh']) > self.methodparams['param_stepfactor']: # Scale steps if they're too large
+                self.methodparams['bv_bh'] = np.abs(self.methodparams['bv_bh']
                                                        - self.methodparams['param_stepfactor'] * der_bh / np.abs(secder_bh))
             else:
-                self.methodparams['radou_bh'] = np.abs(self.methodparams['radou_bh'] - der_bh / np.abs(secder_bh))
-            if delta_bc / np.abs(self.methodparams['radou_bc']) > self.methodparams['param_stepfactor']: # Scale steps if they're too large
-                self.methodparams['radou_bc'] = np.abs(self.methodparams['radou_bc']
+                self.methodparams['bv_bh'] = np.abs(self.methodparams['bv_bh'] - der_bh / np.abs(secder_bh))
+            if delta_bc / np.abs(self.methodparams['bv_bc']) > self.methodparams['param_stepfactor']: # Scale steps if they're too large
+                self.methodparams['bv_bc'] = np.abs(self.methodparams['bv_bc']
                                                        - self.methodparams['param_stepfactor'] * der_bc / np.abs(secder_bc))
             else:
-                self.methodparams['radou_bc'] = np.abs(self.methodparams['radou_bc'] - der_bc / np.abs(secder_bc))
+                self.methodparams['bv_bc'] = np.abs(self.methodparams['bv_bc'] - der_bc / np.abs(secder_bc))
 
             # Update values for the next iteration
             self.runvalues['ave_lnpi'] = calc_trial_ave_lnpi(_ave_contacts, _ave_hbonds,
-                                                             self.methodparams['radou_bc'], self.methodparams['radou_bh'],
+                                                             self.methodparams['bv_bc'], self.methodparams['bv_bh'],
                                                              len(self.runparams['times']), self.runvalues['n_segs'])
             self.runvalues['curr_residue_dfracs'], self.runvalues['curr_segment_dfracs'], self.runvalues['curr_MSE'] = calc_trial_dfracs(self.runvalues['ave_lnpi'],
                                                                                                                                          self.runvalues['segfilters'],
@@ -576,8 +576,8 @@ class MaxEnt():
                                                                                                                                          self.runvalues['n_datapoints'])
 
             # Convergence criterion uses overall 'tolerance' values, same for lambdas
-            if delta_bh / np.abs(self.methodparams['radou_bh']) < self.methodparams['tolerance']:
-                if delta_bc / np.abs(self.methodparams['radou_bc']) < self.methodparams['tolerance']:
+            if delta_bh / np.abs(self.methodparams['bv_bh']) < self.methodparams['tolerance']:
+                if delta_bc / np.abs(self.methodparams['bv_bc']) < self.methodparams['tolerance']:
                     break
 
     def sample_parameters_MC(self):
@@ -591,7 +591,7 @@ class MaxEnt():
 
            The current values for the sampling are stored in the MaxEnt.mcsamplvalues dictionary
 
-           The final result of MC parameter sampling updates radou_bc and radou_bh in the MaxEnt.methodparams dictionary"""
+           The final result of MC parameter sampling updates bv_bc and bv_bh in the MaxEnt.methodparams dictionary"""
 
         # Define some helpful internal functions for making MC moves and recalculating protection factors & deuterated fractions
         def update_sampled_totals(total_bc, total_bh, total_mse, total_resfracs, total_lambdas_bc, total_lambdas_bh):
@@ -653,17 +653,17 @@ class MaxEnt():
         # Save original values before sampling if not saved elsewhere
         self.mcsamplvalues['MC_MSE_ave'] = self.runvalues['curr_MSE']
         self.mcsamplvalues['MC_resfracs_ave'] = self.runvalues['curr_residue_dfracs']
-        curr_radou_bh = self.methodparams['radou_bh']
-        curr_radou_bc = self.methodparams['radou_bc']
+        curr_bv_bh = self.methodparams['bv_bh']
+        curr_bv_bc = self.methodparams['bv_bc']
         #embed()
         ### Start of main sampling loop
         for curr_mc_iter in range(self.methodparams['param_maxiters']):
             # 1) Make move in betas and recalculate protection factors & deuterated fractions
-            trial_radou_bc, trial_radou_bh = generate_trial_betas(curr_radou_bc, curr_radou_bh,
-                                                                  self.methodparams['radou_bcrange'],
-                                                                  self.methodparams['radou_bhrange'],
+            trial_bv_bc, trial_bv_bh = generate_trial_betas(curr_bv_bc, curr_bv_bh,
+                                                                  self.methodparams['bv_bcrange'],
+                                                                  self.methodparams['bv_bhrange'],
                                                                   self.methodparams['param_stepfactor'])
-            trial_ave_lnpi = calc_trial_ave_lnpi(_ave_contacts, _ave_hbonds, trial_radou_bc, trial_radou_bh,
+            trial_ave_lnpi = calc_trial_ave_lnpi(_ave_contacts, _ave_hbonds, trial_bv_bc, trial_bv_bh,
                                                  len(self.runparams['times']), self.runvalues['n_segs'])
             trial_residue_dfracs, trial_segment_dfracs, trial_MSE = calc_trial_dfracs(trial_ave_lnpi,
                                                                                       self.runvalues['segfilters'],
@@ -673,8 +673,8 @@ class MaxEnt():
 
             # Immediately accept move if it improves MSE to experiment
             if trial_MSE < self.runvalues['curr_MSE']:
-                curr_radou_bh = trial_radou_bh
-                curr_radou_bc = trial_radou_bc
+                curr_bv_bh = trial_bv_bh
+                curr_bv_bc = trial_bv_bc
                 self.runvalues['curr_MSE'] = trial_MSE
                 self.runvalues['ave_lnpi'] = trial_ave_lnpi
                 self.runvalues['curr_segment_dfracs'] = trial_segment_dfracs
@@ -687,8 +687,8 @@ class MaxEnt():
                                * self.runvalues['curr_MSE'] / (2.0 * self.methodparams['mc_refvar'])
                 move_prob = np.exp(-(trial_acc_val - orig_acc_val))
                 if move_prob > np.random.random_sample():
-                    curr_radou_bh = trial_radou_bh
-                    curr_radou_bc = trial_radou_bc
+                    curr_bv_bh = trial_bv_bh
+                    curr_bv_bc = trial_bv_bc
                     self.runvalues['curr_MSE'] = trial_MSE
                     self.runvalues['ave_lnpi'] = trial_ave_lnpi
                     self.runvalues['curr_segment_dfracs'] = trial_segment_dfracs
@@ -697,28 +697,28 @@ class MaxEnt():
             if self.methodparams['do_reweight']:
                 curr_lambdas = self.calc_lambdas()
                 if curr_mc_iter == 0:
-                    radou_bc_sum, radou_bh_sum, MSE_sum, residue_dfracs_sum, lambdas_bc_sum, lambdas_bh_sum = 0, 0, 0, 0, 0, 0
-                add_to_totals = update_sampled_totals(radou_bc_sum, radou_bh_sum, MSE_sum, residue_dfracs_sum, lambdas_bc_sum, lambdas_bh_sum)
-                radou_bc_sum, radou_bh_sum, MSE_sum, residue_dfracs_sum, lambdas_bc_sum, lambdas_bh_sum = add_to_totals(curr_radou_bc, curr_radou_bh, self.runvalues['curr_MSE'], self.runvalues['curr_residue_dfracs'], curr_lambdas)
+                    bv_bc_sum, bv_bh_sum, MSE_sum, residue_dfracs_sum, lambdas_bc_sum, lambdas_bh_sum = 0, 0, 0, 0, 0, 0
+                add_to_totals = update_sampled_totals(bv_bc_sum, bv_bh_sum, MSE_sum, residue_dfracs_sum, lambdas_bc_sum, lambdas_bh_sum)
+                bv_bc_sum, bv_bh_sum, MSE_sum, residue_dfracs_sum, lambdas_bc_sum, lambdas_bh_sum = add_to_totals(curr_bv_bc, curr_bv_bh, self.runvalues['curr_MSE'], self.runvalues['curr_residue_dfracs'], curr_lambdas)
             else:
                 if curr_mc_iter == 0:
-                    radou_bc_sum, radou_bh_sum, MSE_sum, residue_dfracs_sum = 0, 0, 0, 0
-                add_to_totals = update_sampled_totals_nolambda(radou_bc_sum, radou_bh_sum, MSE_sum, residue_dfracs_sum)
-                radou_bc_sum, radou_bh_sum, MSE_sum, residue_dfracs_sum = add_to_totals(curr_radou_bc, curr_radou_bh, self.runvalues['curr_MSE'], self.runvalues['curr_residue_dfracs'])
+                    bv_bc_sum, bv_bh_sum, MSE_sum, residue_dfracs_sum = 0, 0, 0, 0
+                add_to_totals = update_sampled_totals_nolambda(bv_bc_sum, bv_bh_sum, MSE_sum, residue_dfracs_sum)
+                bv_bc_sum, bv_bh_sum, MSE_sum, residue_dfracs_sum = add_to_totals(curr_bv_bc, curr_bv_bh, self.runvalues['curr_MSE'], self.runvalues['curr_residue_dfracs'])
             ### End of main sampling loop
 
         # Calculate averages of the sampled values
         if self.methodparams['do_reweight']:
-            radou_bc_ave, radou_bh_ave, MSE_ave, residue_dfracs_ave, self.mcsamplvalues['ave_MClambdas_c'], self.mcsamplvalues['ave_MClambdas_h'] = update_sampled_averages(radou_bc_sum, radou_bh_sum, MSE_sum, residue_dfracs_sum, lambdas_bc_sum, lambdas_bh_sum)
+            bv_bc_ave, bv_bh_ave, MSE_ave, residue_dfracs_ave, self.mcsamplvalues['ave_MClambdas_c'], self.mcsamplvalues['ave_MClambdas_h'] = update_sampled_averages(bv_bc_sum, bv_bh_sum, MSE_sum, residue_dfracs_sum, lambdas_bc_sum, lambdas_bh_sum)
         else:
-            radou_bc_ave, radou_bh_ave, MSE_ave, residue_dfracs_ave = update_sampled_averages_nolambda(radou_bc_sum, radou_bh_sum, MSE_sum, residue_dfracs_sum)
+            bv_bc_ave, bv_bh_ave, MSE_ave, residue_dfracs_ave = update_sampled_averages_nolambda(bv_bc_sum, bv_bh_sum, MSE_sum, residue_dfracs_sum)
 
 
         # Finally, update the main dictionaries with averages of Bh, Bc, MSE, lambda etc, applying a scaling factor for the initial equilibration period if desired
-        self.methodparams['radou_bh'] = self.methodparams['radou_bh'] * (1.0 - self.mcsamplvalues['smoothing_rate']) + \
-                                        self.mcsamplvalues['smoothing_rate'] * radou_bh_ave
-        self.methodparams['radou_bc'] = self.methodparams['radou_bc'] * (1.0 - self.mcsamplvalues['smoothing_rate']) + \
-                                        self.mcsamplvalues['smoothing_rate'] * radou_bc_ave
+        self.methodparams['bv_bh'] = self.methodparams['bv_bh'] * (1.0 - self.mcsamplvalues['smoothing_rate']) + \
+                                        self.mcsamplvalues['smoothing_rate'] * bv_bh_ave
+        self.methodparams['bv_bc'] = self.methodparams['bv_bc'] * (1.0 - self.mcsamplvalues['smoothing_rate']) + \
+                                        self.mcsamplvalues['smoothing_rate'] * bv_bc_ave
         self.mcsamplvalues['MC_MSE_ave'] = self.mcsamplvalues['MC_MSE_ave'] * (1.0 - self.mcsamplvalues['smoothing_rate']) + \
                                            self.mcsamplvalues['smoothing_rate'] * MSE_ave
         self.mcsamplvalues['MC_resfracs_ave'] = self.mcsamplvalues['MC_resfracs_ave'] * (1.0 - self.mcsamplvalues['smoothing_rate']) + \
@@ -730,7 +730,7 @@ class MaxEnt():
                           self.mcsamplvalues['smoothing_rate'] * (self.mcsamplvalues['ave_MClambdas_h'] / self.methodparams['param_maxiters'])
             _lambdanewc = self.mcsamplvalues['final_MClambdas_c'] * (1.0 - self.mcsamplvalues['smoothing_rate']) + \
                           self.mcsamplvalues['smoothing_rate'] * (self.mcsamplvalues['ave_MClambdas_c'] / self.methodparams['param_maxiters'])
-            _lambdanew = 0.5 * ((_lambdanewh / self.methodparams['radou_bh']) + (_lambdanewc / self.methodparams['radou_bc']))
+            _lambdanew = 0.5 * ((_lambdanewh / self.methodparams['bv_bh']) + (_lambdanewc / self.methodparams['bv_bc']))
             self.mcsamplvalues['final_MClambdas_h'] = _lambdanewh
             self.mcsamplvalues['final_MClambdas_c'] = _lambdanewc
             self.mcsamplvalues['final_MClambdas'] = _lambdanew
@@ -770,8 +770,8 @@ class MaxEnt():
         if self.methodparams['do_mcsampl']:
             self.mcsamplvalues['gamma_MClambdas_h'] = self.runparams['gamma'] * target_lambdas_h
             self.mcsamplvalues['gamma_MClambdas_c'] = self.runparams['gamma'] * target_lambdas_c
-            self.mcsamplvalues['gamma_MClambdas'] = 0.5 * ((target_lambdas_h / self.methodparams['radou_bh']) +
-                                                           (target_lambdas_c / self.methodparams['radou_bc']))
+            self.mcsamplvalues['gamma_MClambdas'] = 0.5 * ((target_lambdas_h / self.methodparams['bv_bh']) +
+                                                           (target_lambdas_c / self.methodparams['bv_bc']))
 
             # Calc example stepsize & make move in lambdas
             ave_deviation = np.sum(np.abs(target_lambdas)) / np.sum(self.mcsamplvalues['gamma_MClambdas'] != 0)
@@ -849,8 +849,8 @@ class MaxEnt():
                                                                                self.runvalues['lambda_mod'],
                                                                                self.runvalues['delta_lambda_mod'],
                                                                                self.runvalues['curr_lambda_stepsize'],
-                                                                               self.methodparams['radou_bc'],
-                                                                               self.methodparams['radou_bh']))
+                                                                               self.methodparams['bv_bc'],
+                                                                               self.methodparams['bv_bh']))
 
     def write_restart(self):
         """Write a single line of iteration output to a restart log file and save a restart pickle file"""
@@ -861,8 +861,8 @@ class MaxEnt():
                                                                                      self.runvalues['lambda_mod'],
                                                                                      self.runvalues['delta_lambda_mod'],
                                                                                      self.runvalues['curr_lambda_stepsize'],
-                                                                                     self.methodparams['radou_bc'],
-                                                                                     self.methodparams['radou_bh'],
+                                                                                     self.methodparams['bv_bc'],
+                                                                                     self.methodparams['bv_bh'],
                                                                                      self.runvalues['work']))
         with open("%srestart.pkl" % self.runparams['out_prefix'], 'wb') as fpkl:
             pickle.dump(self.__dict__, fpkl, protocol=-1) # -1 for size purposes
@@ -884,7 +884,7 @@ class MaxEnt():
                                   
             2) Start a new run from scratch, reading input data from calc_hdx objects
                Arguments required:
-                   resultsobj   : A complete HDXer.methods.Radou object, containing contacts, Hbonds,
+                   resultsobj   : A complete HDXer.methods.BV object, containing contacts, Hbonds,
                                   rates etc. attributes for the initial structural ensemble
                    analysisobj  : A complete HDXer.analysis.Analysis object, containing target
                                   (experimental) data etc. for the system of interest
@@ -954,5 +954,5 @@ class MaxEnt():
                        self.runvalues['lambda_mod'],
                        self.runvalues['delta_lambda_mod'],
                        self.runvalues['curr_lambda_stepsize'],
-                       self.methodparams['radou_bc'],
-                       self.methodparams['radou_bh']))
+                       self.methodparams['bv_bc'],
+                       self.methodparams['bv_bh']))

@@ -196,17 +196,17 @@ def generate_trial_betas(bc, bh, bcrange, bhrange, step_multiplier, random_state
         bh = 0
 
     # Make move in betas scaled by step size and desired 'range' of sampling. -ve beta values are not allowed
-    trial_radou_bh, trial_radou_bc = -1, -1
+    trial_bv_bh, trial_bv_bc = -1, -1
     # Note that this regenerates the numpy random state from /dev/urandom
     # or the clock if random_state_debug_value is not set
     state = np.random.RandomState(random_state_debug_value)
-    while trial_radou_bh < 0:
-        trial_radou_bh = bh + ((state.random_sample()) - 0.5) \
+    while trial_bv_bh < 0:
+        trial_bv_bh = bh + ((state.random_sample()) - 0.5) \
                          * step_multiplier * bhrange
-    while trial_radou_bc < 0:
-        trial_radou_bc = bc + ((state.random_sample()) - 0.5) \
+    while trial_bv_bc < 0:
+        trial_bv_bc = bc + ((state.random_sample()) - 0.5) \
                          * step_multiplier * bcrange
-    return trial_radou_bc, trial_radou_bh
+    return trial_bv_bc, trial_bv_bh
 
 
 def calc_trial_ave_lnpi(ave_contacts, ave_hbonds, bc, bh, n_times, n_segs):

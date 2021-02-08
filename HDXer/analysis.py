@@ -27,14 +27,14 @@ class Analyze():
             self.c_resfracs = np.copy(self.resfracs)
             # Byframe PFs = 2D-array[residue, PFs]
             self.pf_byframe = np.copy(resobj.pf_byframe)
-            if type(resobj) is methods.Radou:
+            if type(resobj) is methods.BV:
                 self.lnpf_byframe = np.copy(resobj.lnpf_byframe)
             # Cumulative PFs = 2D-array[chunk, PFs]
             self.pfs = np.reshape(resobj.pfs[:,0], (1, len(resobj.pfs)))
-            if type(resobj) is methods.Radou:
+            if type(resobj) is methods.BV:
                 self.lnpfs = np.reshape(resobj.lnpfs[:,0], (1, len(resobj.lnpfs)))
             self.c_pfs = np.copy(self.pfs)
-            if type(resobj) is methods.Radou:
+            if type(resobj) is methods.BV:
                 self.c_lnpfs = np.copy(self.lnpfs)
             # Cumulative n_frames = 1D-array[n_frames]
             self.n_frames = np.atleast_1d(resobj.n_frames)
@@ -78,7 +78,7 @@ class Analyze():
                     tot_pf /= tot_frames
 
                 # new.c_lnpfs should be calculated from new.lnpf_byframe
-                if type(self.resobj) is methods.Radou:
+                if type(self.resobj) is methods.BV:
                     new.lnpf_byframe = np.concatenate((new.lnpf_byframe, other.lnpf_byframe), axis=1)
                     new.lnpfs = np.concatenate((new.lnpfs, other.lnpfs), axis=0)
                     new.c_lnpfs = np.append(new.c_lnpfs, np.mean(new.lnpf_byframe, axis=1)[np.newaxis,:], axis=0)
@@ -88,7 +88,7 @@ class Analyze():
                 _ = np.zeros(new.resfracs[0].shape)
                 # Redo resfrac calculation based on running average of pfs
                 # N.B. Due to the exponential this is NOT just an average of the resfrac blocks
-                if type(self.resobj) is methods.Radou:
+                if type(self.resobj) is methods.BV:
                     for i2, t in enumerate(new.params['times']):
                         def _residue_fraction_lnpf(lnpf, k, time=t):
                             return 1 - np.exp((-k / np.exp(lnpf)) * time)
@@ -508,7 +508,7 @@ class Analyze():
                 np.savetxt(self.params['outprefix']+"SUMMARY_logProtection_factors.dat", np.stack((self.resnums, self.c_lnpfs[-1]), axis=1),
                            fmt=['%7d','%18.8f'], header="ResID  ln(Protection factor)") # Use residue indices internally, print out IDs
         except AttributeError:
-            if type(self.resobj) is methods.Radou:
+            if type(self.resobj) is methods.BV:
                 raise HDX_Error("Can't write summary log protection factors - perhaps you haven't calculated them yet?")
             else:
                 pass
@@ -569,7 +569,7 @@ class Analyze():
         """Run a by-segment HDX prediction and optionally compares to experiment"""
 
         self.pf_byframe = np.nan_to_num(self.pf_byframe)
-        if type(self.resobj) is methods.Radou:
+        if type(self.resobj) is methods.BV:
             self.lnpf_byframe = np.nan_to_num(self.lnpf_byframe)
 #        self.resfracs = self.resobj.dfrac(write=True, use_self=False, alternate_pfs=np.stack((np.exp(np.mean(self.lnpf_byframe, axis=1)), np.exp(np.std(self.lnpf_byframe, axis=1, ddof=1))), axis=1))
         self.read_segfile()
@@ -1132,7 +1132,7 @@ class Plots():
 
 
         # Work out what needs to be added:
-        if type(self.results.resobj) == methods.Radou:
+        if type(self.results.resobj) == methods.BV:
             do_switch = lambda x: smethods[self.results.resobj.params['switch_method']](x, self.results.resobj.params['switch_scale'], self.results.resobj.params['cut_Nc'])
             cutoff_names = ['cut_Nc']
         if type(self.results.resobj) == methods.PH:

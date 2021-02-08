@@ -22,10 +22,10 @@ def test_reweight_initialize():
                       'do_mcsampl' : False,
                       'mc_refvar' : 0.03,
                       'mc_equilsteps' : -1,
-                      'radou_bc' : 0.35,
-                      'radou_bh' : 2.00,
-                      'radou_bcrange' : 1.5,
-                      'radou_bhrange' : 16.0,
+                      'bv_bc' : 0.35,
+                      'bv_bh' : 2.00,
+                      'bv_bcrange' : 1.5,
+                      'bv_bhrange' : 16.0,
                       'tolerance' : 10**-10,
                       'maxiters' : 10**6,
                       'param_maxiters' : 10**2,
@@ -111,7 +111,7 @@ def test_reweight_data_io_1():
     assert np.allclose(test_expt_normalised, expected_expt)
 
 def test_update_lnpi_1():
-    """Test that iniweights, radou parameters are assigned correctly
+    """Test that iniweights, BV parameters are assigned correctly
        and that weights are calculated correctly with lambda = 0"""
 
     expected_iniweights = np.ones(10)
@@ -167,8 +167,8 @@ def test_update_lnpi_1():
     assert np.allclose(test_obj.runvalues['lnpi'], expected_lnpi)
     assert test_obj.runvalues['ave_lnpi'].shape == expected_shape
     assert np.allclose(test_obj.runvalues['ave_lnpi'], expected_avelnpi)
-    test_obj.methodparams['radou_bc'] = 0.25
-    test_obj.methodparams['radou_bh'] = 5.25
+    test_obj.methodparams['bv_bc'] = 0.25
+    test_obj.methodparams['bv_bh'] = 5.25
     test_obj.update_lnpi_and_weights()
     assert np.allclose(test_obj.runvalues['lnpi'], expected_lnpi_newbetas)
     assert np.allclose(test_obj.runvalues['ave_lnpi'], expected_avelnpi_newbetas)
@@ -191,8 +191,8 @@ def test_update_lnpi_2():
                         'exp_file' : test_exp_file,
                         'times' : test_times, 
                         'out_prefix' : test_prefix }
-    test_methodparam_dict = { 'radou_bc' : 0.25,
-                              'radou_bh' : 5.25 }
+    test_methodparam_dict = { 'bv_bc' : 0.25,
+                              'bv_bh' : 5.25 }
     test_obj = reweighting.MaxEnt(**test_methodparam_dict)
     test_obj.set_run_params(10**-2, None, None, None, test_param_dict)
     test_obj.setup_no_runobj(test_obj.runparams['data_folders'],
@@ -294,8 +294,8 @@ def test_optimize_parameters_gradient():
     expected_bc, expected_bh = 0.25, 5.25
 
     test_obj.optimize_parameters_gradient()
-    out_bc = test_obj.methodparams['radou_bc']
-    out_bh = test_obj.methodparams['radou_bh']
+    out_bc = test_obj.methodparams['bv_bc']
+    out_bh = test_obj.methodparams['bv_bh']
     out_mse = test_obj.runvalues['curr_MSE']
 
     assert np.isclose(out_bc, expected_bc)

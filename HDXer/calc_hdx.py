@@ -36,8 +36,8 @@ def parse():
     parser.add_argument("-sel", "--select", help="MDTraj format selection string for atoms to select for analysis from "
                                                  "trajectories. Default = 'all'", default='all')
     parser.add_argument("-m", "--method", help="Method for analysis. Currently choose between "
-                                               "'Radou' or 'PerssonHalle'. Default = 'Radou'",
-                        choices=['Radou', 'PerssonHalle'], default='Radou', required=True)
+                                               "'BestVendruscolo' or 'PerssonHalle'. Default = 'BestVendruscolo'",
+                        choices=['BestVendruscolo', 'PerssonHalle'], default='BestVendruscolo', required=True)
     parser.add_argument("-dt", "--times", help="Times for analysis, in minutes. "
                                                "Defaults to [ 0.167, 1.0, 10.0, 120.0 ]",
                         nargs='+', default=[0.167, 1.0, 10.0, 120.0], type=float)
@@ -86,7 +86,7 @@ def parse():
 def _get_method(name):
     """Choose a method to run based on a string"""
     # Switch for methods (add new ones here):
-    methods = { 'radou' : HDXer.methods.Radou,
+    methods = { 'bestvendruscolo' : HDXer.methods.BV,
                 'perssonhalle' : HDXer.methods.PH }
 
     return methods[name.lower()]

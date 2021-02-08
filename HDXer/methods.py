@@ -10,44 +10,44 @@ from .errors import HDX_Error
 from . import functions
 
 
-class Radou(DfPredictor):
-    """Class for Radou-style analysis. Subclass of DfPredictor.
+class BV(DfPredictor):
+    """Class for Best/Vendruscolo-style analysis. Subclass of DfPredictor.
        Initialises with a dictionary of default parameters for analysis,
-       accessible as Radou.params
+       accessible as BV.params
 
-       Default parameters can either be updated directly in the Radou.params
+       Default parameters can either be updated directly in the BV.params
        dictionary or by supplying a extra parameters as kwargs during
-       initialisation, e.g.: Radou(cut_nc=1.0) or Radou(**param_dict)
+       initialisation, e.g.: BV(cut_nc=1.0) or BV(**param_dict)
 
        Run a by-residue deuterated fraction prediction with these parameters
-       using the Radou.run method."""
+       using the BV.run method."""
 
     def __init__(self, **extra_params):
-        """Initialises parameters for Radou-style analysis.
+        """Initialises parameters for Best/Vendruscolo-style analysis.
            See self.params for default values"""
         # Initialise main parameters with defaults
-        radouparams = { 'hbond_method' : 'contacts',
-                        'contact_method' : 'cutoff',
-                        'switch_method' : 'rational_6_12',
-                        'switch_scale_Nc' : 1.0,
-                        'switch_scale_Nh' : 1.0,
-                        'switch_width' : 0.25,
-                        'cut_Nc' : 0.65,
-                        'cut_Nh' : 0.24,
-                        'bh_dist' : 0.25,
-                        'bh_ang' : 120.0,
-                        'betac' : 0.35,
-                        'betah' : 2.0 } 
-        radouparams.update(extra_params) # Update main parameter set from kwargs
-        super(Radou, self).__init__(**radouparams)
+        bvparams = { 'hbond_method' : 'contacts',
+                     'contact_method' : 'cutoff',
+                     'switch_method' : 'rational_6_12',
+                     'switch_scale_Nc' : 1.0,
+                     'switch_scale_Nh' : 1.0,
+                     'switch_width' : 0.25,
+                     'cut_Nc' : 0.65,
+                     'cut_Nh' : 0.24,
+                     'bh_dist' : 0.25,
+                     'bh_ang' : 120.0,
+                     'betac' : 0.35,
+                     'betah' : 2.0 }
+        bvparams.update(extra_params) # Update main parameter set from kwargs
+        super(BV, self).__init__(**bvparams)
 
     def __str__(self):
         """Print the method name"""
-        return 'Radou'
+        return 'BestVendruscolo'
 
     def __add__(self, other):
         """Sum results in other method object to this one, weighted by number of frames in each"""
-        if isinstance(other, Radou):
+        if isinstance(other, BV):
             new = copy.deepcopy(self)
             try:
                 if np.array_equal(new.rates, other.rates):
@@ -83,7 +83,7 @@ class Radou(DfPredictor):
            Qidx and cidx are the atom index lists to search for contacts from
            and to respectively (e.g. from amide NH to all heavy atoms).
 
-           Returns count of contacts for each frame in trajectory Radou.t."""
+           Returns count of contacts for each frame in trajectory BV.t."""
 
         try:
             byframe_ctacts = md.compute_neighbors(self.t, cutoff, qidx, haystack_indices=cidx)
@@ -104,7 +104,7 @@ class Radou(DfPredictor):
            Qidx and cidx are the atom index lists to search for contacts from
            and to respectively (e.g. from amide NH to all heavy atoms).
 
-           Options for switching function are defined in Radou.params. Current options:
+           Options for switching function are defined in BV.params. Current options:
            'switch_method' [rational_6_12, sigmoid, exponential, gaussian] : form of switching function
            'switch_scale_Nc' : Scaling of switching function for contacts (default 1.0), see functions.py for equations
            'switch_scale_Nh' : Scaling of switching function for Hbonds (default 1.0), see functions.py for equations
@@ -112,7 +112,7 @@ class Radou(DfPredictor):
            'cut_Nh' : Center of Hbond switching
            'switch_width' : Width of switching. r > cut_Nc + switch_width, count == 0.0 (not used in this version)
 
-           Returns count of contacts for each frame in trajectory Radou.t."""
+           Returns count of contacts for each frame in trajectory BV.t."""
 
         smethods = {
                     'rational_6_12' : functions.rational_6_12,
@@ -161,21 +161,21 @@ class Radou(DfPredictor):
 
     def calc_contacts(self, qidx, cidx, cutoff, scale=None):
         """Calculate contacts between 'query' and 'contact' atom selections
-           using a given method defined in Radou.params['contact_method'].
+           using a given method defined in BV.params['contact_method'].
 
            Current options:
-           'cutoff' : Use a hard cutoff for counting contacts, defined as Radou.params['cut_Nc']
+           'cutoff' : Use a hard cutoff for counting contacts, defined as BV.params['cut_Nc']
            'switch' : Use a switching function for counting contacts.
-                      r <= Radou.params['cut_Nc'], count = 1
-                      r > Radou.params['cut_Nc'], 0 < switched_count < 1
+                      r <= BV.params['cut_Nc'], count = 1
+                      r > BV.params['cut_Nc'], 0 < switched_count < 1
 
-           Options for the switching function should be defined in the 'Radou.params'
+           Options for the switching function should be defined in the 'BV.params'
            dictionary.
 
            Qidx and cidx are the atom index lists to search for contacts from
            and to respectively (e.g. from amide NH to all heavy atoms).
 
-           Returns count of contacts for each frame in trajectory Radou.t."""
+           Returns count of contacts for each frame in trajectory BV.t."""
 
         # Switch for contacts methods
         cmethods = {
@@ -191,7 +191,7 @@ class Radou(DfPredictor):
         """Calculates number of protein H-bonds for a particular atom index
            using the 'contacts' method. Bonds to all protein O* evaluated
            by default, optionally all non-protein too (including waters) if 
-           Radou.params['protonly'] is False.
+           BV.params['protonly'] is False.
        
            Usage: _calc_hbonds_contacts(atom)"""
 
@@ -209,10 +209,10 @@ class Radou(DfPredictor):
     def _calc_hbonds_bh(self, HN, minfreq=0.0):
         """Calculates number of protein H-bonds for a particular atom index
            using the 'Baker-Hubbard' method. Default donor-acceptor distance < 0.25 nm
-           + angle > 120 degrees in Radou.params.
+           + angle > 120 degrees in BV.params.
            Reports all H-bonds (minimum freq=0.0) by default. Bonds to all protein 
            O* evaluated by default, optionally all non-protein too 
-           (including waters) if Radou.params['protonly'] is False.
+           (including waters) if BV.params['protonly'] is False.
        
            Usage: _calc_hbonds_bh(atom, [minfreq])
            Returns: n_frames length array of H-bond counts for desired atom"""
@@ -245,14 +245,14 @@ class Radou(DfPredictor):
     def calc_hbonds(self, donors):
         """Calculates H-bond counts per frame for each atom in 'donors' array
            to each acceptor atom in the system. H-bonds can be defined using
-           any one of the methods below, selected with Radou.params['hbond_method']
+           any one of the methods below, selected with BV.params['hbond_method']
     
            Available methods:
               'contacts' : Distance-based cutoff of 0.24 nm 
               'bh'       : Baker-Hubbard distance ( < 0.25 nm) and angle ( > 120 deg) cutoff
 
            Default cutoff/angle can be adjusted with entries 'cut_Nh'/'bh_dist'/
-           'bh_ang'in Radou.params.
+           'bh_ang'in BV.params.
 
            Usage: calc_hbonds(donors)
            Returns: n_donors * n_frames 2D array of H-bond counts per frame for all donors"""
@@ -288,10 +288,10 @@ class Radou(DfPredictor):
         """Calculates contacts between each NH atom and the surrounding heavy atoms,
            excluding those in residues n-2 to n+2.
     
-           By Radou.params default contacts < 0.65 nm are calculated, and only
+           By BV.params default contacts < 0.65 nm are calculated, and only
            protein-heavys, are included, but can include all heavys if desired.
            Also skips first residue (N-terminus) in a residue list by default too
-           - see Radou.params['protonly'] and Radou.params['skip_first']
+           - see BV.params['protonly'] and BV.params['skip_first']
 
            Usage: calc_nh_contacts(reslist)
            Returns: (reslist, n_res x n_frames 2D array of contacts per frame for each residue)"""
@@ -323,13 +323,13 @@ class Radou(DfPredictor):
         return np.asarray(reslist), contact_count
 
     def PF(self):
-        """Calculates Radou et al. protection factors for a provided trajectory.
+        """Calculates Best & Vendruscolo protection factors for a provided trajectory.
            Empirical scaling factors of Nh * betah and Nc * betac taken from 
-           Radou.params (2.0 & 0.35 respectively by default).
+           BV.params (2.0 & 0.35 respectively by default).
            H-bonds can be calculated using either the 'contacts' definition or
            the Baker-Hubbard distance + angle definition. Printout of temporary
            files containing by-residue contacts can be enabled/disabled with 
-           Radou.params['save_detailed'].
+           BV.params['save_detailed'].
 
            All proline residues and the N-terminal residue are skipped. See 
            calc_hbonds and calc_nh_contacts for optional kwargs.       
@@ -408,7 +408,7 @@ class Radou(DfPredictor):
         """Runs a by-residue HDX prediction for the provided MDTraj trajectory
 
            Usage: run(traj)
-           Returns: None (results are stored as Radou.resfracs)"""
+           Returns: None (results are stored as BV.resfracs)"""
         self.t = trajectory # Note this will add attributes to the original trajectory, not a copy
         self.n_frames = self.t.n_frames
         self.top = trajectory.topology.copy() # This does not add attributes to the original topology

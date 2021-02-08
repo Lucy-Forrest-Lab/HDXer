@@ -23,7 +23,7 @@ class DfPredictor(object):
 
        Default parameters can either be updated directly in the self.params
        dictionary or by supplying a extra parameters as kwargs during
-       initialisation of the child class, e.g.: Radou(cut_nc=1.0) or PH(**param_dict)"""
+       initialisation of the child class, e.g.: BV(cut_nc=1.0) or PH(**param_dict)"""
 
     def __init__(self, **extra_params):
         """Initialises a deuterated fraction predictor and updates
@@ -304,7 +304,7 @@ class DfPredictor(object):
            lgk_W = lgk_W,ref + lgB_L + lgB_R
 
            Default parameters for the above can be modified in the 
-           Radou.params['kint_params'] dictionary. Sequence-based
+           BV.params['kint_params'] dictionary. Sequence-based
            rate adjustments can be modified in the 'kint_adjs' and
            '_reordered_kint_adjs' dictionaries.
 
@@ -452,7 +452,7 @@ class DfPredictor(object):
     def dfrac(self, write=True, use_self=True, alternate_pfs=None):
         """Function for calculating by-residue deuterated fractions, for
            a set of Protection factors, intrinsic rates, and exposure times
-           previously defined for the current Radou object. Optionally write
+           previously defined for the current BV object. Optionally write
            out results.
 
            Alternatively, if use_self=False, take an alternative set of PFs
