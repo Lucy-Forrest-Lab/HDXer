@@ -5,9 +5,9 @@ Unit and regression test for the HDXer package.
 # Import package, test suite, and other packages as needed
 from HDXer import reweighting_functions
 import numpy as np
-import pytest
-import sys, os
+import os
 from glob import glob
+
 
 def test_read_contacts_hbonds():
     """Test the processing of contact/H-bond files from calc_hdx.
@@ -49,7 +49,9 @@ def test_read_contacts_hbonds():
 
     test_folders = [ 'HDXer/tests/data/reweighting_1', 
                      'HDXer/tests/data/reweighting_2' ]
-    out_c, out_h, out_res = reweighting_functions.read_contacts_hbonds(test_folders, test_contacts_prefix, test_hbonds_prefix)
+    out_c, out_h, out_res = reweighting_functions.read_contacts_hbonds(test_folders,
+                                                                       test_contacts_prefix,
+                                                                       test_hbonds_prefix)
     assert np.array_equal(out_c, expected_contacts)
     assert np.array_equal(out_h, expected_hbonds)
     assert out_res == expected_resids
@@ -65,11 +67,11 @@ def test_read_kints_segments():
     test_expt_file = os.path.join(test_folder, 'experimental_data.dat')
     test_times = np.array([0.5, 5.0, 60.0])
     test_n_res = 6
-    test_resids = np.array([[2, 3, 4, 5, 6, 7]], dtype=np.int16) # 2D array as residues usually come from a list of input files
+    test_resids = np.array([[2, 3, 4, 5, 6, 7]], dtype=np.int16)  # 2D array as residues usually come from a list of input files
 
     expected_minuskt = np.array([10.0, 100.0, 1000.0, 0.1, 268.21, 8.5])
     expected_minuskt = np.repeat(expected_minuskt[:, np.newaxis], len(test_times), axis=1)*test_times
-    expected_minuskt = expected_minuskt[np.newaxis,:,:].repeat(3, axis=0) # Repeat 3 because there are 3 segments in this target data file
+    expected_minuskt = expected_minuskt[np.newaxis,:,:].repeat(3, axis=0)  # Repeat 3 because there are 3 segments in this target data file
     expected_minuskt *= -1
 
     expected_expt = np.array([[ 0.72823031, 0.83269571, 0.97653617 ],
@@ -296,7 +298,7 @@ def test_calc_work():
     test_weights = np.ones(10) / 10
     # 6 residues
     test_lambdas = np.zeros(6) 
-    test_kT = 2.4942 # for kJ/mol @ 300 K
+    test_kT = 2.4942  # for kJ/mol @ 300 K
 
     expected_work = 0.0
     
@@ -313,4 +315,3 @@ def test_calc_work():
     out_work = reweighting_functions.calc_work(test_lnpi, test_lambdas, test_weights, test_kT)
 
     assert out_work == expected_work
-

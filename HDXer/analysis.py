@@ -160,7 +160,7 @@ class Analyze():
            
            Usage: _cumulative_average(data, blocksizes)"""
         if not len(data) == np.sum(blocksizes):
-            raise HDX_Error("Unable to cumulatively average data of length %d using total blocksizes %d" \
+            raise HDX_Error("Unable to cumulatively average data of length %d using total blocksizes %d"
                                       % (len(data), int(np.sum(blocksizes))))
         aves = np.zeros(len(blocksizes))
         blocksum = np.cumsum(blocksizes)
@@ -592,7 +592,7 @@ class Plots():
         if isinstance(aobj, Analyze):
             self.results = aobj
         else:
-            raise HDX_Error("Can't initialize a Plots object from anything"\
+            raise HDX_Error("Can't initialize a Plots object from anything"
                             "other than a completed Analyze object.")
 
         ### Define defaults for matplotlib plots
@@ -1143,8 +1143,8 @@ class Plots():
             for cutoff_name in cutoff_names:
                 fig = plt.figure(figsize=(11, 8.5)) # Letter
                 ax = fig.gca()
-                xs = np.arange(0, \
-                               self.results.resobj.params[cutoff_name] + self.results.resobj.params['switch_width'] + 0.2, \
+                xs = np.arange(0,
+                               self.results.resobj.params[cutoff_name] + self.results.resobj.params['switch_width'] + 0.2,
                                0.005)
                 switch_ys = do_switch(xs)
                 lowx_idx = int(np.where(xs == self.results.resobj.params[cutoff_name])[0])

@@ -5,8 +5,9 @@ Unit and regression test for the HDXer package.
 # Import package, test suite, and other packages as needed
 from HDXer import reweighting
 import numpy as np
-import pytest
-import sys, os, filecmp
+import os
+import filecmp
+
 
 def test_reweight_initialize():
     """Tests the initialization and method parameters of a
@@ -36,10 +37,11 @@ def test_reweight_initialize():
                       'random_initial' : False,
                       'kT' : 2.9101093,
                       'test_param' : 'foo'
-                         }
+                      }
 
     test_obj = reweighting.MaxEnt(**test_dict)
     assert test_obj.methodparams == expected_dict
+
 
 def test_reweight_data_io_1():
     """Test that runparams are assigned correctly and
@@ -74,8 +76,6 @@ def test_reweight_data_io_1():
                     [ 0.75439649, 0.79088392, 0.97067021 ],
                     [ 0.99994366, 1.00000000, 1.00000000 ] ])
 
-    
-
 
     test_prefix = 'HDXer/tests/data/tmp_test_output/tmp_'
     test_folders = [ 'HDXer/tests/data/reweighting_1' ]
@@ -98,17 +98,20 @@ def test_reweight_data_io_1():
                              test_obj.runparams['kint_file'],
                              test_obj.runparams['exp_file'],
                              test_obj.runparams['times'])
-            
+
 
     assert np.array_equal(test_obj.runvalues['contacts'], expected_contacts)
     assert np.array_equal(test_obj.runvalues['hbonds'], expected_hbonds)
     assert test_obj.runvalues['nframes'] == expected_nframes
     # Broadcast expected_minuskt to 3 dims for segments * residues * times 
-    assert np.array_equal(test_obj.runvalues['minuskt'], np.repeat(expected_minuskt[np.newaxis,:,:], len(expected_expt), axis=0) )
+    assert np.array_equal(test_obj.runvalues['minuskt'],
+                          np.repeat(expected_minuskt[np.newaxis,:,:], len(expected_expt), axis=0) )
     # Internally the exp_dfrac_filtered arrays have 0 for residues not in the segment.
     # So, test for closeness, not identity
-    test_expt_normalised = np.sum(test_obj.runvalues['exp_dfrac_filtered'], axis=1) / np.sum(test_obj.runvalues['segfilters'], axis=1)
+    test_expt_normalised = np.sum(test_obj.runvalues['exp_dfrac_filtered'], axis=1) \
+                           / np.sum(test_obj.runvalues['segfilters'], axis=1)
     assert np.allclose(test_expt_normalised, expected_expt)
+
 
 def test_update_lnpi_1():
     """Test that iniweights, BV parameters are assigned correctly
@@ -123,7 +126,7 @@ def test_update_lnpi_1():
                               [0. , 2., 0., 0., 0., 0., 0., 0., 2., 0.],
                               [3.4, 1.4, 11.7, 1.4, 5.85, 1.4, 12.05, 1.05, 5.5, 1.75]])
     expected_avelnpi = np.array([3.8 , 5.5 , 8.25, 2.8 , 0.4 , 4.55])
-    expected_shape = (3,6,3) # Shape of ave_lnpi array as [n_segs, n_residues, n_times]
+    expected_shape = (3,6,3)  # Shape of ave_lnpi array as [n_segs, n_residues, n_times]
     expected_avelnpi = np.broadcast_to(expected_avelnpi[np.newaxis, :, np.newaxis], expected_shape)
 
     # Calculated with Bc = 0.25, Bh = 5.25
@@ -135,8 +138,6 @@ def test_update_lnpi_1():
                                        [6.25, 1., 16., 1., 8., 1., 16.25, 0.75, 7.75, 1.25]])
     expected_avelnpi_newbetas = np.array([ 4.625,  7.75 , 11.625,  2.   ,  1.05 ,  5.925])
     expected_avelnpi_newbetas = np.broadcast_to(expected_avelnpi_newbetas[np.newaxis, :, np.newaxis], expected_shape)
-
-
 
 
     test_prefix = 'HDXer/tests/data/tmp_test_output/tmp_'
@@ -174,6 +175,7 @@ def test_update_lnpi_1():
     assert np.allclose(test_obj.runvalues['ave_lnpi'], expected_avelnpi_newbetas)
     assert np.array_equal(test_obj.runvalues['currweights'], expected_currweights)
 
+
 def test_update_lnpi_2():
     """Test that weights are calculated correctly with provided lambdas"""
 
@@ -200,7 +202,7 @@ def test_update_lnpi_2():
                              test_obj.runparams['exp_file'],
                              test_obj.runparams['times'])
 
-   # Now apply lambdas and re-test weights are calculated correctly
+    # Now apply lambdas and re-test weights are calculated correctly
 
     test_lambdas = np.ones(6)
     test_obj.runvalues['lambdas'] = test_lambdas
@@ -224,7 +226,7 @@ def test_update_lnpi_2():
                                      2.38208213e-07, 4.41969461e-14, 9.23633476e-09, 7.28684451e-14])
     expected_avelnpi_newbetas = np.array([7.75002633e+00, 7.75000000e+00, 1.54999692e+01, 
                                           2.50000883e+00, 3.06058537e-04, 1.59985003e+01])
-    expected_shape = (3,6,3) # ave_lnpi is array of shape [n_segs, n_residues, n_times]
+    expected_shape = (3,6,3)  # ave_lnpi is array of shape [n_segs, n_residues, n_times]
     expected_avelnpi_newbetas = np.broadcast_to(expected_avelnpi_newbetas[np.newaxis, :, np.newaxis], expected_shape)
 
     assert np.allclose(test_obj.runvalues['lnpi'], expected_lnpi_newbetas)
@@ -248,7 +250,7 @@ def test_update_lnpi_2():
                                      6.57010430e-01, 2.26174337e-14, 2.72069635e-08, 6.14805589e-14])
     expected_avelnpi_newbetas = np.array([3.47943189e+00, 7.75000000e+00, 1.04081690e+01, 
                                           1.67873690e+00, 1.42836727e-07, 1.61642522e+01])
-    expected_shape = (3,6,3) # ave_lnpi is array of shape [n_segs, n_residues, n_times]
+    expected_shape = (3,6,3)  # ave_lnpi is array of shape [n_segs, n_residues, n_times]
     expected_avelnpi_newbetas = np.broadcast_to(expected_avelnpi_newbetas[np.newaxis, :, np.newaxis], expected_shape)
 
     assert np.allclose(test_obj.runvalues['lnpi'], expected_lnpi_newbetas)
@@ -263,7 +265,6 @@ def test_optimize_parameters_gradient():
        with the gradient-descent protocol"""
 
     test_prefix = 'HDXer/tests/data/tmp_test_output/tmp_'
-    test_obj = reweighting.MaxEnt(do_reweight=False)
     test_folders = [ 'HDXer/tests/data/reweighting_1' ]
     test_kint_file = os.path.join('HDXer/tests/data/reweighting_1', 'intrinsic_rates.dat')
     # Residue-based, calculated with Bc = 0.25, Bh = 5.25
@@ -371,6 +372,7 @@ def test_run_partial_reweight_4():
     # compare file contents with filecmp
     for out_file, expected_file in zip(test_files, expected_files):
         assert filecmp.cmp(out_file, expected_file, shallow=False)
+
 
 def test_run_full_reweight_4():
     """Tests that output files are created correctly using file comparisons.

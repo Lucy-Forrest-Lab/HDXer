@@ -228,7 +228,7 @@ class BV(DfPredictor):
         # distances & angles, otherwise only bond_triplets averaged across
         # a trajectory are returned
         bond_triplets = md.geometry.hbond._get_bond_triplets(c.topology, exclude_water=self.params['protonly'])
-        mask, distances, angles = md.geometry.hbond._compute_bounded_geometry(c, bond_triplets,\
+        mask, distances, angles = md.geometry.hbond._compute_bounded_geometry(c, bond_triplets,
                                   self.params['bh_dist'], [1, 2], [0, 1, 2], freq=minfreq, periodic=True)
 
         # can select distance/angle criteria here
