@@ -57,6 +57,81 @@ def test_read_contacts_hbonds():
     assert out_res == expected_resids
 
 
+def test_subsample_contacts_hbonds():
+    """Test the subsampling of contact/H-bond files from calc_hdx."""
+
+    test_folders = [ 'HDXer/tests/data/reweighting_1', 
+                     'HDXer/tests/data/reweighting_2' ]
+    test_contacts_prefix = 'Contacts_chain_0_res_'
+    test_hbonds_prefix = 'Hbonds_chain_0_res_'
+    test_start = 1
+    test_end = 15
+    test_interval = 1
+
+
+    # * 2 for double folders
+    expected_hbonds = np.array([ 
+                      [ 1, 1, 1, 0, 0, 2, 0, 0, 0, 0 ] * 2,
+                      [ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ] * 2,
+                      [ 2, 2, 2, 2, 2, 1, 1, 1, 1, 1 ] * 2,
+                      [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ] * 2,
+                      [ 0, 1, 0, 0, 0, 0, 0, 0, 1, 0 ] * 2,
+                      [ 1, 0, 2, 0, 1, 0, 2, 0, 1, 0 ] * 2 ])
+    expected_hbonds = expected_hbonds[:,test_start:test_end:test_interval]
+
+    expected_contacts = np.array([ 
+                        [ 10, 10, 10, 5, 5, 20, 5, 5, 5, 5 ] * 2,
+                        [ 10, 10, 10, 10, 10, 10, 10, 10, 10, 10 ] * 2,
+                        [ 20, 20, 20, 20, 20, 10, 10, 10, 10, 10 ] * 2,
+                        [ 10, 10, 10, 5, 5, 20, 5, 5, 5, 5 ] * 2,
+                        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ] * 2,
+                        [ 4, 4, 22, 4, 11, 4, 23, 3, 10, 5 ] * 2 ])
+    expected_contacts = expected_contacts[:,test_start:test_end:test_interval]
+
+
+    out_c, out_h, out_res = reweighting_functions.read_contacts_hbonds(test_folders,
+                                                                       test_contacts_prefix,
+                                                                       test_hbonds_prefix)
+    out_c, out_h = reweighting_functions.subsample_contacts_hbonds(out_c, out_h, test_start, test_end, test_interval)
+
+    assert np.array_equal(out_c, expected_contacts)
+    assert np.array_equal(out_h, expected_hbonds)
+
+    # Same test but this time with an interval
+    test_start = 3
+    test_end = -1
+    test_interval = 3
+
+
+    # * 2 for double folders
+    expected_hbonds = np.array([ 
+                      [ 1, 1, 1, 0, 0, 2, 0, 0, 0, 0 ] * 2,
+                      [ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ] * 2,
+                      [ 2, 2, 2, 2, 2, 1, 1, 1, 1, 1 ] * 2,
+                      [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ] * 2,
+                      [ 0, 1, 0, 0, 0, 0, 0, 0, 1, 0 ] * 2,
+                      [ 1, 0, 2, 0, 1, 0, 2, 0, 1, 0 ] * 2 ])
+    expected_hbonds = expected_hbonds[:,test_start::test_interval]
+
+    expected_contacts = np.array([ 
+                        [ 10, 10, 10, 5, 5, 20, 5, 5, 5, 5 ] * 2,
+                        [ 10, 10, 10, 10, 10, 10, 10, 10, 10, 10 ] * 2,
+                        [ 20, 20, 20, 20, 20, 10, 10, 10, 10, 10 ] * 2,
+                        [ 10, 10, 10, 5, 5, 20, 5, 5, 5, 5 ] * 2,
+                        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ] * 2,
+                        [ 4, 4, 22, 4, 11, 4, 23, 3, 10, 5 ] * 2 ])
+    expected_contacts = expected_contacts[:,test_start::test_interval]
+
+
+    out_c, out_h, out_res = reweighting_functions.read_contacts_hbonds(test_folders,
+                                                                       test_contacts_prefix,
+                                                                       test_hbonds_prefix)
+    out_c, out_h = reweighting_functions.subsample_contacts_hbonds(out_c, out_h, test_start, test_end, test_interval)
+
+    assert np.array_equal(out_c, expected_contacts)
+    assert np.array_equal(out_h, expected_hbonds)
+
+
 def test_read_kints_segments():
     """Test the processing of intrinsic rates files and target
        (experimental) HDX data files."""

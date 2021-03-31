@@ -4,7 +4,13 @@ import numpy as np
 import pickle
 
 from .errors import HDX_Error
-from .reweighting_functions import read_contacts_hbonds, read_kints_segments, generate_trial_betas, calc_trial_ave_lnpi, calc_trial_dfracs, calc_work
+from .reweighting_functions import read_contacts_hbonds, \
+                                   subsample_contacts_hbonds, \
+                                   read_kints_segments, \
+                                   generate_trial_betas, \
+                                   calc_trial_ave_lnpi, \
+                                   calc_trial_dfracs, \
+                                   calc_work
 
 class MaxEnt():
     """Class for Maximum Entropy reweighting of a predicted
@@ -91,6 +97,12 @@ class MaxEnt():
         _contacts, _hbonds, _sorted_resids = read_contacts_hbonds(folderlist,
                                                                   self.runparams['contacts_prefix'],
                                                                   self.runparams['hbonds_prefix'])
+        if self.runparams['do_subsample']:
+            _contacts, _hbonds = subsample_contacts_hbonds(_contacts, _hbonds,
+                                                           self.runparams['sub_start'],
+                                                           self.runparams['sub_end'],
+                                                           self.runparams['sub_interval'])
+
         _nresidues = len(_hbonds)
         _minuskt, _exp_dfrac, _segfilters = read_kints_segments(kint_file, expt_file_path, _nresidues, times, _sorted_resids)
 
@@ -206,6 +218,12 @@ class MaxEnt():
                          'curriter' : None,
                          'is_converged' : None }
         _contacts, _hbonds, _sorted_resids = resultsobj.contacts, resultsobj.hbonds, np.array([ resultsobj.top.residue(residx).resSeq for residx in resultsobj.reslist ])
+        if self.runparams['do_subsample']:
+            _contacts, _hbonds = subsample_contacts_hbonds(_contacts, _hbonds,
+                                                           self.runparams['sub_start'],
+                                                           self.runparams['sub_end'],
+                                                           self.runparams['sub_interval'])
+
         _nresidues = len(_hbonds)
 
         ### This duplicates the function of reweighting_functions.read_kints_segments locally but using the calc_hdx objects
@@ -358,7 +376,11 @@ class MaxEnt():
     def set_run_params(self, gamma, resultsobj, analysisobj, restart, paramdict):
         """Set basic run parameters if not being read from calc_hdx object or a restart file"""
 
-        self.runparams = {}
+        # By default we read in all frames
+        self.runparams = { 'do_subsample': False,
+                           'sub_start': 0,
+                           'sub_end': -1,
+                           'sub_interval': 1 }
         self.runparams['gamma'] = gamma
 
         if restart is not None:
@@ -881,17 +903,32 @@ class MaxEnt():
                    exp_file     : Path to a file containing target (experimental) deuterated fractions
                    times        : List of deuteration timepoints in minutes, corresponding to the target 
                                   (experimental) data
-                                  
+               Optional arguments:
+                   do_subsample (False) : Flag to turn on subsampling of the input trajectory frames
+                   sub_start (0) : Starting index (inclusive) for subsampling the trajectory frames
+                   sub_end (-1) : Ending index (exclusive, use '-1' to denote final frame) for subsampling the trajectory frames
+                   sub_interval (1) : Interval for subsampling the trajectory frames
+
             2) Start a new run from scratch, reading input data from calc_hdx objects
                Arguments required:
                    resultsobj   : A complete HDXer.methods.BV object, containing contacts, Hbonds,
                                   rates etc. attributes for the initial structural ensemble
                    analysisobj  : A complete HDXer.analysis.Analysis object, containing target
                                   (experimental) data etc. for the system of interest
-                                  
+               Optional arguments:
+                   do_subsample (False) : Flag to turn on subsampling of the input trajectory frames
+                   sub_start (0) : Starting index (inclusive) for subsampling the trajectory frames
+                   sub_end (-1) : Ending index (exclusive, use '-1' to denote final frame) for subsampling the trajectory frames
+                   sub_interval (1) : Interval for subsampling the trajectory frames
+
             3) Restart a run that is alrady partially complete
                Arguments required:
-                   restart      : Path to a HDXer.reweighting restart file, with '.pkl' suffix"""
+                   restart      : Path to a HDXer.reweighting restart file, with '.pkl' suffix
+               Optional arguments:
+                   do_subsample (False) : Flag to turn on subsampling of the input trajectory frames
+                   sub_start (0) : Starting index (inclusive) for subsampling the trajectory frames
+                   sub_end (-1) : Ending index (exclusive, use '-1' to denote final frame) for subsampling the trajectory frames
+                   sub_interval (1) : Interval for subsampling the trajectory frames"""
 
         # 0) Set basic parameters
         self.set_run_params(gamma, resultsobj, analysisobj, restart, run_params)

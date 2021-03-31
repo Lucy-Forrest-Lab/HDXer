@@ -127,6 +127,25 @@ def read_contacts_hbonds(folderlist, contacts_prefix, hbonds_prefix):
     return contacts, hbonds, sorted_resids_per_folder
 
 
+def subsample_contacts_hbonds(full_contacts, full_hbonds, start, end, interval):
+    """Subsample arrays of contacts and hbonds to only select specified fromes.
+       Slices the contacts & hbonds arrays as: array[:,start:end:interval]
+       (Set end = -1 to include the final frame in sampling)
+
+       Usage: subsample_contacts_hbonds(full_contacts, full_hbonds, start, end, interval)
+
+       Returns: contacts[n_residues, n_subsampled_frames], hbonds[n_residues, n_subsampled_frames]"""
+    # keep all the residues, but subsample the frames
+    if end == -1:
+        # Otherwise the final frame will be skipped too
+        sampled_contacts = full_contacts[:,start::interval]
+        sampled_hbonds = full_hbonds[:,start::interval]
+    else:
+        sampled_contacts = full_contacts[:,start:end:interval]
+        sampled_hbonds = full_hbonds[:,start:end:interval]
+
+    return sampled_contacts, sampled_hbonds
+
     # Read intrinsic rates, multiply by times
 def read_kints_segments(kintfile, expt_path, n_res, times, sorted_resids):
     """Read in intrinsic rates, segments, and expt deuterated fractions.

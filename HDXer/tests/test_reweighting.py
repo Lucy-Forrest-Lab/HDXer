@@ -113,6 +113,102 @@ def test_reweight_data_io_1():
     assert np.allclose(test_expt_normalised, expected_expt)
 
 
+def test_reweight_data_io_2():
+    """Test that runparams are assigned correctly and
+       data files are read in correctly.
+       Test 2 subsamples contacts & H-bond inputs"""
+
+    # Do test of sub_start & sub_end
+    expected_nframes = 5
+    expected_hbonds = np.array([ 
+                      [ 1, 1, 1, 0, 0 ],
+                      [ 1, 1, 1, 1, 1 ],
+                      [ 2, 2, 2, 2, 2 ],
+                      [ 0, 0, 0, 0, 0 ],
+                      [ 0, 1, 0, 0, 0 ],
+                      [ 1, 0, 2, 0, 1 ] ])
+
+    expected_contacts = np.array([ 
+                        [ 10, 10, 10, 5, 5 ],
+                        [ 10, 10, 10, 10, 10 ],
+                        [ 20, 20, 20, 20, 20 ],
+                        [ 10, 10, 10, 5, 5 ],
+                        [ 0, 0, 0, 0, 0 ],
+                        [ 4, 4, 22, 4, 11 ] ])
+
+    test_prefix = 'HDXer/tests/data/tmp_test_output/tmp_'
+    test_folders = [ 'HDXer/tests/data/reweighting_1' ]
+    test_times = np.array([ 0.5, 5.0, 60.0 ])
+    test_kint_file = os.path.join('HDXer/tests/data/reweighting_1', 'intrinsic_rates.dat')
+    test_exp_file = os.path.join('HDXer/tests/data/reweighting_1', 'experimental_data.dat')
+    test_contacts_prefix = 'Contacts_chain_0_res_'
+    test_hbonds_prefix = 'Hbonds_chain_0_res_'
+    test_param_dict = { 'do_subsample' : True,
+                        'sub_start' : 0,
+                        'sub_end' : 5,
+                        'hbonds_prefix' : test_hbonds_prefix,
+                        'contacts_prefix' : test_contacts_prefix,
+                        'data_folders' : test_folders,
+                        'kint_file' : test_kint_file,
+                        'exp_file' : test_exp_file,
+                        'times' : test_times,
+                        'out_prefix' : test_prefix}
+
+
+    test_obj = reweighting.MaxEnt()
+    test_obj.set_run_params(10**-2, None, None, None, test_param_dict)
+    test_obj.setup_no_runobj(test_obj.runparams['data_folders'],
+                             test_obj.runparams['kint_file'],
+                             test_obj.runparams['exp_file'],
+                             test_obj.runparams['times'])
+    # Check test of sub_start & sub_end
+    assert np.array_equal(test_obj.runvalues['contacts'], expected_contacts)
+    assert np.array_equal(test_obj.runvalues['hbonds'], expected_hbonds)
+    assert test_obj.runvalues['nframes'] == expected_nframes
+
+    # Do test of sub_interval
+    expected_nframes = 5
+    expected_hbonds = np.array([ 
+                      [ 1, 0, 2, 0, 0 ],
+                      [ 1, 1, 1, 1, 1 ],
+                      [ 2, 2, 1, 1, 1 ],
+                      [ 0, 0, 0, 0, 0 ],
+                      [ 1, 0, 0, 0, 0 ],
+                      [ 0, 0, 0, 0, 0 ] ])
+
+    expected_contacts = np.array([ 
+                        [ 10, 5, 20, 5, 5 ],
+                        [ 10, 10, 10, 10, 10 ],
+                        [ 20, 20, 10, 10, 10 ],
+                        [ 10, 5, 20, 5, 5 ],
+                        [ 0, 0, 0, 0, 0 ],
+                        [ 4, 4, 4, 3, 5 ] ])
+
+    test_param_dict = { 'do_subsample' : True,
+                        'sub_start' : 1,
+                        'sub_end' : -1,
+                        'sub_interval' : 2,
+                        'hbonds_prefix' : test_hbonds_prefix,
+                        'contacts_prefix' : test_contacts_prefix,
+                        'data_folders' : test_folders,
+                        'kint_file' : test_kint_file,
+                        'exp_file' : test_exp_file,
+                        'times' : test_times,
+                        'out_prefix' : test_prefix}
+
+
+    test_obj = reweighting.MaxEnt()
+    test_obj.set_run_params(10**-2, None, None, None, test_param_dict)
+    test_obj.setup_no_runobj(test_obj.runparams['data_folders'],
+                             test_obj.runparams['kint_file'],
+                             test_obj.runparams['exp_file'],
+                             test_obj.runparams['times'])
+    # Check test of sub_interval
+    assert np.array_equal(test_obj.runvalues['contacts'], expected_contacts)
+    assert np.array_equal(test_obj.runvalues['hbonds'], expected_hbonds)
+    assert test_obj.runvalues['nframes'] == expected_nframes
+
+
 def test_update_lnpi_1():
     """Test that iniweights, BV parameters are assigned correctly
        and that weights are calculated correctly with lambda = 0"""
