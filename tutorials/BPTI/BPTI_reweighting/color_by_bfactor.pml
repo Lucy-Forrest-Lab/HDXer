@@ -1,5 +1,5 @@
-# Script to colour BPTI structure by bfactor
-load $HDXER_PATH/protocol/figures/pymol/Reweighted-Predicted_byatom_1min.pdb, 5PTI 
+# Script to color BPTI structure by bfactor
+load Reweighted-Predicted_byatom_1min.pdb, 5PTI 
 hide everything
 show cartoon, 5PTI
 bg_color white
@@ -14,4 +14,4 @@ set specular, 0
 set depth_cue, 0.1
 set ray_trace_fog, 0
 set orthoscopic, on
-png Reweighted-Predicted_byatom_1min.png, width=1200, height=1200, dpi=300, ray=1
+png Reweighted-Predicted_byatom_1min.png, width=900, height=1200, dpi=600, ray=1
