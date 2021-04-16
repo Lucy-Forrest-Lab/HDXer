@@ -6,10 +6,17 @@
 import numpy as np
 import mdtraj as md
 
+# Choose a time to analyze
+times = [0.167, 1.0, 10.0, 120.0]
+time_to_plot = 120.0
+time_idx = times.index(time_to_plot)
+
 # Load in PDB and desired residue segments
 inpdb = md.load("5pti.pdb")
-df_segs_diffs = np.loadtxt("Reweighted-Predicted_diffs.dat", dtype=[ ('segs', np.int32, (1,)),\
+df_segs_diffs = np.loadtxt("Reweighted-Initial_predicted_diffs.dat", dtype=[ ('segs', np.int32, (1,)),\
                            ('fracs', np.float64, (4,))])
+
+
 
 #Atom based bfacs = list of lists
 bfacs = []
@@ -18,7 +25,7 @@ for i in range(inpdb.n_atoms):
 for atm, dfracs in enumerate(bfacs):
     for line, seg in enumerate(df_segs_diffs['segs'], start=0):
         if all((inpdb.topology.atom(atm).residue.resSeq == seg)):
-            dfracs.append(df_segs_diffs['fracs'][line, 3]) # 120.0 min
+            dfracs.append(df_segs_diffs['fracs'][line, time_idx]) # Time selection
         else:
             continue
 
@@ -27,5 +34,5 @@ for atm, dfracs in enumerate(bfacs):
 bfac_array = np.asarray([ np.mean(np.asarray(x)) for x in bfacs ])
 bfac_array = np.nan_to_num(bfac_array)
 
-np.savetxt("Reweighted-Predicted_byatom_1min.txt", bfac_array)
-inpdb.save_pdb("Reweighted-Predicted_byatom_1min.pdb", bfactors=bfac_array)
+np.savetxt("Reweighted-Predicted_byatom_%smin.txt" % time_to_plot, bfac_array)
+inpdb.save_pdb("Reweighted-Predicted_byatom_%smin.pdb" % time_to_plot, bfactors=bfac_array)
