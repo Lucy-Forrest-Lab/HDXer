@@ -341,16 +341,18 @@ class BV(DfPredictor):
                      array of by-frame protection factors for each residue)"""
 
         # Setup residue/atom lists        
-        hn_atms = functions.extract_HN(self.t, log=self.params['logfile'])
+        all_hn_atms = functions.extract_HN(self.t, log=self.params['logfile'])
         prolines = functions.list_prolines(self.t, log=self.params['logfile'])
         # Check all hn_atoms are from protein residues except prolines
         if prolines is not None:
-            reslist = [ self.top.atom(a).residue.index for a in hn_atms if self.top.atom(a).residue.is_protein and self.top.atom(a).residue.index not in prolines[:,1] ]
+            reslist = [ self.top.atom(a).residue.index for a in all_hn_atms if self.top.atom(a).residue.is_protein and self.top.atom(a).residue.index not in prolines[:,1] ]
+            prot_hn_atms = np.array([ a for a in all_hn_atms if self.top.atom(a).residue.is_protein and self.top.atom(a).residue.index not in prolines[:,1] ])
         else:
-            reslist = [ self.top.atom(a).residue.index for a in hn_atms if self.top.atom(a).residue.is_protein ]
-
+            reslist = [ self.top.atom(a).residue.index for a in all_hn_atms if self.top.atom(a).residue.is_protein ]
+            prot_hn_atms = np.array([ a for a in all_hn_atms if self.top.atom(a).residue.is_protein ])
+        
         # Calc Nc/Nh
-        hres, n_hbonds = self.calc_hbonds(hn_atms)
+        hres, n_hbonds = self.calc_hbonds(prot_hn_atms)
         cres, n_contacts = self.calc_nh_contacts(reslist)
 
         if not np.array_equal(hres, cres):
