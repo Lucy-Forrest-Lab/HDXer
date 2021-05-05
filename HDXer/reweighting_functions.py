@@ -170,6 +170,11 @@ def read_kints_segments(kintfile, expt_path, n_res, times, sorted_resids):
     exp_dfrac = np.loadtxt(expt_path, usecols=tuple(range(2,2+len(times))))
     segments = np.loadtxt(expt_path, usecols=(0,1), dtype=np.int32)
 
+    # check for edge case of only fitting to a single peptide
+    if len(exp_dfrac.shape) < 2:
+        exp_dfrac = np.reshape(exp_dfrac, (1, len(times)))
+        segments = np.reshape(segments, (1, 2))
+
     # convert expt to (segments, residues, times)
     exp_dfrac = exp_dfrac[:,np.newaxis,:].repeat(n_res, axis=1)
     # convert kint to (segments, residues, times)
