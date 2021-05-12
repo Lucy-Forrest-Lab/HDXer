@@ -96,7 +96,7 @@ conda develop HDXer
 
 Installing in 'editable' mode will allow you to pull updates directly from this Github repository to your local *HDXer* installation, without having to reinstall the package.
 
-Now, you finished installing the *HDXer* Python package. Let's add the path to the *HDXer* directory as in your *.bashrc* and/or *.bash_profile*. The *HDXer* directory will be used throughout the protocol and referred to as \$HDXER_PATH.
+Now, you finished installing the *HDXer* Python package. Let's add the path to the *HDXer* directory as in your *.bashrc* and/or *.bash_profile*. The *HDXer* directory will be used throughout the tutorials and referred to as \$HDXER_PATH.
 
 ```bash
 cd HDXer
@@ -135,12 +135,12 @@ The tests will take roughly 60 seconds to complete. All tests should pass. If yo
 ---
 
 
-## **Protocol**
+## **Tutorials**
 
-An example protocol for ***HDXer*** is available in a series of easy-to-follow Jupyter notebooks. These notebooks can be viewed within the [GitHub page](https://github.com/TMB-CSB/HDXer/tree/master/protocol) or with Jupyter Lab. You will be able to run code interactively within each notebook using Jupyter Lab. Run the following commands on terminal to access the notebooks using Jupyter Lab:
+The tutorials for the ***HDXer*** are available in a series of easy-to-follow Jupyter notebooks. These notebooks can be viewed within the [GitHub page](https://github.com/TMB-CSB/HDXer/tree/master/tutorials) or with Jupyter Lab. You will be able to run code interactively within each notebook using Jupyter Lab. Run the following commands on terminal to access the notebooks using Jupyter Lab:
 
 ```bash
-cd $HDXER_PATH/protocol/notebooks
+cd $HDXER_PATH/tutorials/notebooks
 jupyter lab
 ```
 
