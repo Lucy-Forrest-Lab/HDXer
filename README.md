@@ -57,6 +57,12 @@ If there is no *git* available on your computer, you can install it using conda,
 conda install -c conda-forge git
 ```
 
+If you encounter errors at this point, or using the ```conda``` commands below, you may need to update youe ```$PATH``` environment variable and/or initialize ```conda``` on your system. The *Anaconda* package will usually provide an initialization script for this purpose, for example, on Windows available in:
+```
+~/Anaconda/etc/profile.d/conda.sh
+```
+You can add this script or other initialization command to your ```~/.bashrc``` file to make sure it's run every time you open a new Bash terminal. Check out the *Anaconda* documentation for your filesystem if you continue to have problems, as ```conda``` commands are required for the remaining parts of the installation.
+
 <br>
 
 ### *HDXer* Python Package

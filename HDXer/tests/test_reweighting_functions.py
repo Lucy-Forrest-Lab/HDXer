@@ -5,7 +5,7 @@ Unit and regression test for the HDXer package.
 # Import package, test suite, and other packages as needed
 from HDXer import reweighting_functions
 import numpy as np
-import os
+from pathlib import Path
 from glob import glob
 
 
@@ -13,13 +13,13 @@ def test_read_contacts_hbonds():
     """Test the processing of contact/H-bond files from calc_hdx.
        Also covers strip_filename and files_to_array"""
 
-    test_folder = 'HDXer/tests/data/reweighting_1'
+    test_folder = Path('HDXer/tests/data/reweighting_1')
     test_contacts_prefix = 'Contacts_chain_0_res_'
     test_hbonds_prefix = 'Hbonds_chain_0_res_'
 
     expected_resids = [ 2, 3, 4, 5, 6, 7 ]
-    c_files = sorted(glob(os.path.join(test_folder, test_contacts_prefix+'*')))
-    h_files = sorted(glob(os.path.join(test_folder, test_hbonds_prefix+'*')))
+    c_files = sorted(glob(str(test_folder / (test_contacts_prefix+'*'))))
+    h_files = sorted(glob(str(test_folder / (test_hbonds_prefix+'*'))))
     out_c = [ reweighting_functions.strip_filename(fn, test_contacts_prefix) for fn in c_files ]
     out_h = [ reweighting_functions.strip_filename(fn, test_hbonds_prefix) for fn in h_files ]
 
@@ -47,8 +47,8 @@ def test_read_contacts_hbonds():
 
     expected_resids = [ [ 2, 3, 4, 5, 6, 7 ] , [ 2, 3, 4, 5, 6, 7, 8, 9 ] ]
 
-    test_folders = [ 'HDXer/tests/data/reweighting_1', 
-                     'HDXer/tests/data/reweighting_2' ]
+    test_folders = [ str(Path(fn)) for fn in  [ 'HDXer/tests/data/reweighting_1', 
+                                                'HDXer/tests/data/reweighting_2' ] ]
     out_c, out_h, out_res = reweighting_functions.read_contacts_hbonds(test_folders,
                                                                        test_contacts_prefix,
                                                                        test_hbonds_prefix)
@@ -60,8 +60,8 @@ def test_read_contacts_hbonds():
 def test_subsample_contacts_hbonds():
     """Test the subsampling of contact/H-bond files from calc_hdx."""
 
-    test_folders = [ 'HDXer/tests/data/reweighting_1', 
-                     'HDXer/tests/data/reweighting_2' ]
+    test_folders = [ str(Path(fn)) for fn in  [ 'HDXer/tests/data/reweighting_1', 
+                                                'HDXer/tests/data/reweighting_2' ] ]
     test_contacts_prefix = 'Contacts_chain_0_res_'
     test_hbonds_prefix = 'Hbonds_chain_0_res_'
     test_start = 1
@@ -137,9 +137,9 @@ def test_read_kints_segments():
        (experimental) HDX data files."""
 
     # First check all residues can be read in correctly
-    test_folder = 'HDXer/tests/data/reweighting_1'
-    test_rates_file = os.path.join(test_folder, 'intrinsic_rates.dat')
-    test_expt_file = os.path.join(test_folder, 'experimental_data.dat')
+    test_folder = Path('HDXer/tests/data/reweighting_1')
+    test_rates_file = test_folder / 'intrinsic_rates.dat'
+    test_expt_file = test_folder / 'experimental_data.dat'
     test_times = np.array([0.5, 5.0, 60.0])
     test_n_res = 6
     test_resids = np.array([[2, 3, 4, 5, 6, 7]], dtype=np.int16)  # 2D array as residues usually come from a list of input files
@@ -160,8 +160,8 @@ def test_read_kints_segments():
                                     [ False, False, True, True, False, False ]])
     expected_segfilters = np.repeat(expected_segfilters[:, :, np.newaxis], len(test_times), axis=2)
 
-    out_minuskt, out_expt, out_segfilters = reweighting_functions.read_kints_segments(test_rates_file,
-                                                                                      test_expt_file,
+    out_minuskt, out_expt, out_segfilters = reweighting_functions.read_kints_segments(str(test_rates_file),
+                                                                                      str(test_expt_file),
                                                                                       test_n_res,
                                                                                       test_times,
                                                                                       test_resids)

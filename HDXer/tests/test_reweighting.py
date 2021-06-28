@@ -5,8 +5,8 @@ Unit and regression test for the HDXer package.
 # Import package, test suite, and other packages as needed
 from HDXer import reweighting
 import numpy as np
-import os
 import filecmp
+from pathlib import Path
 
 
 def test_reweight_initialize():
@@ -77,19 +77,19 @@ def test_reweight_data_io_1():
                     [ 0.99994366, 1.00000000, 1.00000000 ] ])
 
 
-    test_prefix = 'HDXer/tests/data/tmp_test_output/tmp_'
-    test_folders = [ 'HDXer/tests/data/reweighting_1' ]
-    test_kint_file = os.path.join('HDXer/tests/data/reweighting_1', 'intrinsic_rates.dat')
-    test_exp_file = os.path.join('HDXer/tests/data/reweighting_1', 'experimental_data.dat')
+    test_prefix = Path('HDXer/tests/data/tmp_test_output/tmp_')
+    test_folders = [ str(Path(fn)) for fn in [ 'HDXer/tests/data/reweighting_1' ] ]
+    test_kint_file = Path('HDXer/tests/data/reweighting_1/intrinsic_rates.dat')
+    test_exp_file = Path('HDXer/tests/data/reweighting_1/experimental_data.dat')
     test_contacts_prefix = 'Contacts_chain_0_res_'
     test_hbonds_prefix = 'Hbonds_chain_0_res_'
     test_param_dict = { 'hbonds_prefix' : test_hbonds_prefix,
                         'contacts_prefix' : test_contacts_prefix,
                         'data_folders' : test_folders,
-                        'kint_file' : test_kint_file,
-                        'exp_file' : test_exp_file,
+                        'kint_file' : str(test_kint_file),
+                        'exp_file' : str(test_exp_file),
                         'times' : test_times,
-                        'out_prefix' : test_prefix}
+                        'out_prefix' : str(test_prefix) }
 
 
     test_obj = reweighting.MaxEnt()
@@ -136,11 +136,11 @@ def test_reweight_data_io_2():
                         [ 0, 0, 0, 0, 0 ],
                         [ 4, 4, 22, 4, 11 ] ])
 
-    test_prefix = 'HDXer/tests/data/tmp_test_output/tmp_'
-    test_folders = [ 'HDXer/tests/data/reweighting_1' ]
+    test_prefix = Path('HDXer/tests/data/tmp_test_output/tmp_')
+    test_folders = [ str(Path(fn)) for fn in [ 'HDXer/tests/data/reweighting_1' ] ]
     test_times = np.array([ 0.5, 5.0, 60.0 ])
-    test_kint_file = os.path.join('HDXer/tests/data/reweighting_1', 'intrinsic_rates.dat')
-    test_exp_file = os.path.join('HDXer/tests/data/reweighting_1', 'experimental_data.dat')
+    test_kint_file = Path('HDXer/tests/data/reweighting_1/intrinsic_rates.dat')
+    test_exp_file = Path('HDXer/tests/data/reweighting_1/experimental_data.dat')
     test_contacts_prefix = 'Contacts_chain_0_res_'
     test_hbonds_prefix = 'Hbonds_chain_0_res_'
     test_param_dict = { 'do_subsample' : True,
@@ -149,10 +149,10 @@ def test_reweight_data_io_2():
                         'hbonds_prefix' : test_hbonds_prefix,
                         'contacts_prefix' : test_contacts_prefix,
                         'data_folders' : test_folders,
-                        'kint_file' : test_kint_file,
-                        'exp_file' : test_exp_file,
+                        'kint_file' : str(test_kint_file),
+                        'exp_file' : str(test_exp_file),
                         'times' : test_times,
-                        'out_prefix' : test_prefix}
+                        'out_prefix' : str(test_prefix) }
 
 
     test_obj = reweighting.MaxEnt()
@@ -191,10 +191,10 @@ def test_reweight_data_io_2():
                         'hbonds_prefix' : test_hbonds_prefix,
                         'contacts_prefix' : test_contacts_prefix,
                         'data_folders' : test_folders,
-                        'kint_file' : test_kint_file,
-                        'exp_file' : test_exp_file,
+                        'kint_file' : str(test_kint_file),
+                        'exp_file' : str(test_exp_file),
                         'times' : test_times,
-                        'out_prefix' : test_prefix}
+                        'out_prefix' : str(test_prefix) }
 
 
     test_obj = reweighting.MaxEnt()
@@ -236,20 +236,20 @@ def test_update_lnpi_1():
     expected_avelnpi_newbetas = np.broadcast_to(expected_avelnpi_newbetas[np.newaxis, :, np.newaxis], expected_shape)
 
 
-    test_prefix = 'HDXer/tests/data/tmp_test_output/tmp_'
-    test_folders = [ 'HDXer/tests/data/reweighting_1' ]
-    test_kint_file = os.path.join('HDXer/tests/data/reweighting_1', 'intrinsic_rates.dat')
-    test_exp_file = os.path.join('HDXer/tests/data/reweighting_1', 'experimental_data.dat')
+    test_prefix = Path('HDXer/tests/data/tmp_test_output/tmp_')
+    test_folders = [ str(Path(fn)) for fn in [ 'HDXer/tests/data/reweighting_1' ] ]
+    test_kint_file = Path('HDXer/tests/data/reweighting_1/intrinsic_rates.dat')
+    test_exp_file = Path('HDXer/tests/data/reweighting_1/experimental_data.dat')
     test_times = np.array([ 0.5, 5.0, 60.0 ])
     test_contacts_prefix = 'Contacts_chain_0_res_'
     test_hbonds_prefix = 'Hbonds_chain_0_res_'
     test_param_dict = { 'hbonds_prefix' : test_hbonds_prefix,
                         'contacts_prefix' : test_contacts_prefix,
                         'data_folders' : test_folders,
-                        'kint_file' : test_kint_file,
-                        'exp_file' : test_exp_file,
+                        'kint_file' : str(test_kint_file),
+                        'exp_file' : str(test_exp_file),
                         'times' : test_times,
-                        'out_prefix' : test_prefix }
+                        'out_prefix' : str(test_prefix) }
 
 
     test_obj = reweighting.MaxEnt()
@@ -275,20 +275,20 @@ def test_update_lnpi_1():
 def test_update_lnpi_2():
     """Test that weights are calculated correctly with provided lambdas"""
 
-    test_prefix = 'HDXer/tests/data/tmp_test_output/tmp_'
-    test_folders = [ 'HDXer/tests/data/reweighting_1' ]
-    test_kint_file = os.path.join('HDXer/tests/data/reweighting_1', 'intrinsic_rates.dat')
-    test_exp_file = os.path.join('HDXer/tests/data/reweighting_1', 'experimental_data.dat')
+    test_prefix = Path('HDXer/tests/data/tmp_test_output/tmp_')
+    test_folders = [ str(Path(fn)) for fn in [ 'HDXer/tests/data/reweighting_1' ] ]
+    test_kint_file = Path('HDXer/tests/data/reweighting_1/intrinsic_rates.dat')
+    test_exp_file = Path('HDXer/tests/data/reweighting_1/experimental_data.dat')
     test_times = np.array([ 0.5, 5.0, 60.0 ])
     test_contacts_prefix = 'Contacts_chain_0_res_'
     test_hbonds_prefix = 'Hbonds_chain_0_res_'
     test_param_dict = { 'hbonds_prefix' : test_hbonds_prefix,
                         'contacts_prefix' : test_contacts_prefix,
                         'data_folders' : test_folders,
-                        'kint_file' : test_kint_file,
-                        'exp_file' : test_exp_file,
+                        'kint_file' : str(test_kint_file),
+                        'exp_file' : str(test_exp_file),
                         'times' : test_times, 
-                        'out_prefix' : test_prefix }
+                        'out_prefix' : str(test_prefix) }
     test_methodparam_dict = { 'bv_bc' : 0.25,
                               'bv_bh' : 5.25 }
     test_obj = reweighting.MaxEnt(**test_methodparam_dict)
@@ -360,21 +360,21 @@ def test_optimize_parameters_gradient():
     """Test that beta_c and beta_h parameters are optimized correctly
        with the gradient-descent protocol"""
 
-    test_prefix = 'HDXer/tests/data/tmp_test_output/tmp_'
-    test_folders = [ 'HDXer/tests/data/reweighting_1' ]
-    test_kint_file = os.path.join('HDXer/tests/data/reweighting_1', 'intrinsic_rates.dat')
+    test_prefix = Path('HDXer/tests/data/tmp_test_output/tmp_')
+    test_folders = [ str(Path(fn)) for fn in [ 'HDXer/tests/data/reweighting_1' ] ]
+    test_kint_file = Path('HDXer/tests/data/reweighting_1/intrinsic_rates.dat')
     # Residue-based, calculated with Bc = 0.25, Bh = 5.25
-    test_exp_file = os.path.join('HDXer/tests/data/reweighting_3', 'experimental_data_new_params.dat')
+    test_exp_file = Path('HDXer/tests/data/reweighting_3/experimental_data_new_params.dat')
     test_contacts_prefix = 'Contacts_chain_0_res_'
     test_hbonds_prefix = 'Hbonds_chain_0_res_'
     test_times = np.array([0.5, 5.0, 60.0])
     test_param_dict = { 'hbonds_prefix' : test_hbonds_prefix,
                         'contacts_prefix' : test_contacts_prefix,
                         'data_folders' : test_folders,
-                        'kint_file' : test_kint_file,
-                        'exp_file' : test_exp_file,
+                        'kint_file' : str(test_kint_file),
+                        'exp_file' : str(test_exp_file),
                         'times' : test_times, 
-                        'out_prefix' : test_prefix }
+                        'out_prefix' : str(test_prefix) }
 
 
     test_obj = reweighting.MaxEnt(param_maxiters=10000)
@@ -405,29 +405,29 @@ def test_run_no_reweight_1():
 
 
     test_obj = reweighting.MaxEnt(do_reweight=False)
-    test_prefix = 'HDXer/tests/data/tmp_test_output/test_run_no_reweight_'
-    reference_prefix = 'HDXer/tests/data/reweighting_1/reference_run_no_reweight_'
-    test_folders = [ 'HDXer/tests/data/reweighting_1' ]
-    test_kint_file = os.path.join('HDXer/tests/data/reweighting_1', 'intrinsic_rates.dat')
-    test_exp_file = os.path.join('HDXer/tests/data/reweighting_1', 'experimental_data.dat')
+    test_prefix = Path('HDXer/tests/data/tmp_test_output/test_run_no_reweight_')
+    reference_prefix = Path('HDXer/tests/data/reweighting_1/reference_run_no_reweight_')
+    test_folders = [ str(Path(fn)) for fn in [ 'HDXer/tests/data/reweighting_1' ] ]
+    test_kint_file = Path('HDXer/tests/data/reweighting_1/intrinsic_rates.dat')
+    test_exp_file = Path('HDXer/tests/data/reweighting_1/experimental_data.dat')
     test_contacts_prefix = 'Contacts_chain_0_res_'
     test_hbonds_prefix = 'Hbonds_chain_0_res_'
     test_times = np.array([0.5, 5.0, 60.0])
     test_param_dict = { 'hbonds_prefix' : test_hbonds_prefix,
                         'contacts_prefix' : test_contacts_prefix,
                         'data_folders' : test_folders,
-                        'kint_file' : test_kint_file,
-                        'exp_file' : test_exp_file,
+                        'kint_file' : str(test_kint_file),
+                        'exp_file' : str(test_exp_file),
                         'times' : test_times,
-                        'out_prefix' : test_prefix }
+                        'out_prefix' : str(test_prefix) }
 
 
     test_obj.run(gamma=10**-2, **test_param_dict)
     test_suffixes = ['final_segment_fractions.dat', 'final_weights.dat',
                      'initial_params.dat', 'per_iteration_output.dat',
                      'per_restart_output.dat', 'work.dat' ]
-    test_files = [ test_prefix + f for f in test_suffixes ] 
-    expected_files = [ reference_prefix + f for f in test_suffixes ] 
+    test_files = [ str(test_prefix) + f for f in test_suffixes ] 
+    expected_files = [ str(reference_prefix) + f for f in test_suffixes ] 
 
     # compare file contents with filecmp
     for out_file, expected_file in zip(test_files, expected_files):
@@ -440,21 +440,21 @@ def test_run_partial_reweight_4():
 
 
     test_obj = reweighting.MaxEnt(do_reweight=True, maxiters=50)
-    test_prefix = 'HDXer/tests/data/tmp_test_output/test_run_partial_reweight_'
-    reference_prefix = 'HDXer/tests/data/reweighting_4/reference_run_partial_reweight_'
-    test_folders = [ 'HDXer/tests/data/reweighting_4' ]
-    test_kint_file = os.path.join('HDXer/tests/data/reweighting_4', 'intrinsic_rates.dat')
-    test_exp_file = os.path.join('HDXer/tests/data/reweighting_4', 'experimental_data.dat')
+    test_prefix = Path('HDXer/tests/data/tmp_test_output/test_run_partial_reweight_')
+    reference_prefix = Path('HDXer/tests/data/reweighting_4/reference_run_partial_reweight_')
+    test_folders = [ str(Path(fn)) for fn in [ 'HDXer/tests/data/reweighting_4' ] ]
+    test_kint_file = Path('HDXer/tests/data/reweighting_4/intrinsic_rates.dat')
+    test_exp_file = Path('HDXer/tests/data/reweighting_4/experimental_data.dat')
     test_contacts_prefix = 'Contacts_chain_0_res_'
     test_hbonds_prefix = 'Hbonds_chain_0_res_'
     test_times = np.array([5.0, 30.0])
     test_param_dict = { 'hbonds_prefix' : test_hbonds_prefix,
                         'contacts_prefix' : test_contacts_prefix,
                         'data_folders' : test_folders,
-                        'kint_file' : test_kint_file,
-                        'exp_file' : test_exp_file,
+                        'kint_file' : str(test_kint_file),
+                        'exp_file' : str(test_exp_file),
                         'times' : test_times,
-                        'out_prefix' : test_prefix,
+                        'out_prefix' : str(test_prefix),
                         'stepfactor' : 10**-5 }
 
 
@@ -462,8 +462,8 @@ def test_run_partial_reweight_4():
     test_suffixes = ['final_segment_fractions.dat', 'final_weights.dat',
                      'initial_params.dat', 'per_iteration_output.dat',
                      'per_restart_output.dat', 'work.dat' ]
-    test_files = [ test_prefix + f for f in test_suffixes ] 
-    expected_files = [ reference_prefix + f for f in test_suffixes ] 
+    test_files = [ str(test_prefix) + f for f in test_suffixes ] 
+    expected_files = [ str(reference_prefix) + f for f in test_suffixes ] 
 
     # compare file contents with filecmp
     for out_file, expected_file in zip(test_files, expected_files):
@@ -476,11 +476,11 @@ def test_run_full_reweight_4():
 
 
     test_obj = reweighting.MaxEnt(do_reweight=True)
-    test_prefix = 'HDXer/tests/data/tmp_test_output/test_run_full_reweight_'
-    reference_prefix = 'HDXer/tests/data/reweighting_4/reference_run_full_reweight_'
-    test_folders = [ 'HDXer/tests/data/reweighting_4' ]
-    test_kint_file = os.path.join('HDXer/tests/data/reweighting_4', 'intrinsic_rates.dat')
-    test_exp_file = os.path.join('HDXer/tests/data/reweighting_4', 'experimental_data.dat')
+    test_prefix = Path('HDXer/tests/data/tmp_test_output/test_run_full_reweight_')
+    reference_prefix = Path('HDXer/tests/data/reweighting_4/reference_run_full_reweight_')
+    test_folders = [ str(Path(fn)) for fn in [ 'HDXer/tests/data/reweighting_4' ] ]
+    test_kint_file = Path('HDXer/tests/data/reweighting_4/intrinsic_rates.dat')
+    test_exp_file = Path('HDXer/tests/data/reweighting_4/experimental_data.dat')
     test_contacts_prefix = 'Contacts_chain_0_res_'
     test_hbonds_prefix = 'Hbonds_chain_0_res_'
     test_times = np.array([5.0, 30.0])
@@ -488,10 +488,10 @@ def test_run_full_reweight_4():
     test_param_dict = { 'hbonds_prefix' : test_hbonds_prefix,
                         'contacts_prefix' : test_contacts_prefix,
                         'data_folders' : test_folders,
-                        'kint_file' : test_kint_file,
-                        'exp_file' : test_exp_file,
+                        'kint_file' : str(test_kint_file),
+                        'exp_file' : str(test_exp_file),
                         'times' : test_times,
-                        'out_prefix' : test_prefix,
+                        'out_prefix' : str(test_prefix),
                         'stepfactor' : 10**-5,
                         'restart_interval' : test_restart }
 
@@ -500,8 +500,8 @@ def test_run_full_reweight_4():
     test_suffixes = ['final_segment_fractions.dat', 'final_weights.dat',
                      'initial_params.dat', 'per_iteration_output.dat',
                      'per_restart_output.dat', 'work.dat' ]
-    test_files = [ test_prefix + f for f in test_suffixes ] 
-    expected_files = [ reference_prefix + f for f in test_suffixes ] 
+    test_files = [ str(test_prefix) + f for f in test_suffixes ] 
+    expected_files = [ str(reference_prefix) + f for f in test_suffixes ] 
 
     # compare file contents with filecmp
     for out_file, expected_file in zip(test_files, expected_files):
