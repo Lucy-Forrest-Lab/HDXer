@@ -57,7 +57,7 @@ If there is no *git* available on your computer, you can install it using conda,
 conda install -c conda-forge git
 ```
 
-If you encounter errors at this point, or using the ```conda``` commands below, you may need to update youe ```$PATH``` environment variable and/or initialize ```conda``` on your system. The *Anaconda* package will usually provide an initialization script for this purpose, for example, on Windows available in:
+If you encounter errors at this point, or using the ```conda``` commands below, you may need to update your ```$PATH``` environment variable and/or initialize ```conda``` on your system. The *Anaconda* package will usually provide an initialization script for this purpose, for example, on Windows available in:
 ```
 ~/Anaconda/etc/profile.d/conda.sh
 ```
@@ -159,6 +159,14 @@ In the *notebooks/* directory, there are five Jupyter notebooks.
 - 05_heatmap.ipynb
 
 These notebooks will walk you through how to run ***HDXer*** and how to analyze the results with an example application of both HDX predictions and ensemble reweighting.
+
+N.B. As per the Jupyter website, the Jupyter Notebook aims to support the latest versions of these browsers:
+
+- Chrome
+- Safari
+- Firefox
+
+Up to date versions of Opera and Edge may also work, but if they don’t, please use one of the supported browsers.
 
 ---
 
