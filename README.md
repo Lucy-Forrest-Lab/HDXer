@@ -1,10 +1,5 @@
 HDXer
 ==============================
-[//]: # (Badges)
-[![Travis Build Status](https://travis-ci.com/rtb1c13/HDXer.svg?branch=master)](https://travis-ci.com/rtb1c13/HDXer)
-[![AppVeyor Build status](https://ci.appveyor.com/api/projects/status/REPLACE_WITH_APPVEYOR_LINK/branch/master?svg=true)](https://ci.appveyor.com/project/rtb1c13/HDXer/branch/master)
-[![codecov](https://codecov.io/gh/rtb1c13/HDXer/branch/master/graph/badge.svg)](https://codecov.io/gh/rtb1c13/HDXer/branch/master)
-
 ## **Introduction**
 
 ***HDXer*** is a Python package that can be used to:
@@ -172,7 +167,7 @@ Up to date versions of Opera and Edge may also work, but if they don’t, please
 
 ### Copyright
 
-Copyright (c) 2020, 2021, Richard T. Bradshaw, Fabrizio Marinelli, Suhwan Paul Lee
+Copyright (c) 2020, 2021, Richard T. Bradshaw, Fabrizio Marinelli, Paul Suhwan Lee
 
 
 #### Acknowledgements
