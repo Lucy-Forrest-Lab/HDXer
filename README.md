@@ -56,7 +56,7 @@ If you encounter errors at this point, or using the ```conda``` commands below, 
 ```
 ~/Anaconda/etc/profile.d/conda.sh
 ```
-You can add this script or other initialization command to your ```~/.bashrc``` file to make sure it's run every time you open a new Bash terminal. Check out the *Anaconda* documentation for your filesystem if you continue to have problems, as ```conda``` commands are required for the remaining parts of the installation.
+You can call this script or other initialization command in your ```~/.bashrc``` file (for example, by running ```echo ". ~/Anaconda/etc/profile.d/conda.sh" >> ~/.bashrc```)  to make sure it's run every time you open a new Bash terminal. Check out the *Anaconda* documentation for your filesystem if you continue to have problems, as ```conda``` commands are required for the remaining parts of the installation.
 
 <br>
 

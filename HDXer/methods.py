@@ -19,6 +19,20 @@ class BV(DfPredictor):
        dictionary or by supplying a extra parameters as kwargs during
        initialisation, e.g.: BV(cut_nc=1.0) or BV(**param_dict)
 
+       Additional method parameters (type, default value) that can be defined here:
+           hbond_method (str, 'contacts') : Method to calculate H-bonds (see help(BV.calc_hbonds) for options)
+           contact_method (str, 'cutoff') : Method to calculate contacts (see help(BV.calc_contacts) for options) 
+           switch_method (str, 'rational_6_12') : Method for switching function if contact_method == 'switch'
+           switch_scale_Nc (float, 1.0) : scale (gradient) for contacts switching function if contact_method == 'switch'
+           switch_scale_Nh (float, 1.0) : scale (gradient) for H-bonds switching function if hbond_method == 'contacts' and contact_method == 'switch'
+           switch_width (float, 0.25) : Width in nm over which switching function is applied
+           cut_Nc (float, 0.65) : Cutoff in nm for calculating contacts
+           cut_Nh (float, 0.24 : Cutoff in nm for calculating H-bonds if hbond_method == 'contacts'
+           bh_dist (float, 0.25) : Cutoff in nm for calculating Baker-Hubbard H-bonds if hbond_method == 'bh'
+           bh_ang (float, 120.0) : Cutoff in degrees for calculating Baker-Hubbard H-bonds if hbond_method == 'bh'
+           betac (float, 0.35) : Value of beta_C for protection factor prediction
+           betah (float, 2.0) : Value of beta_H for protection factor prediction
+
        Run a by-residue deuterated fraction prediction with these parameters
        using the BV.run method."""
 
@@ -435,6 +449,13 @@ class PH(DfPredictor):
        Default parameters can either be updated directly in the PH.params
        dictionary or by supplying a extra parameters as kwargs during
        initialisation, e.g.: PH() or PH(**param_dict)
+        
+       Additional method parameters (type, default value) that can be defined here:
+           cut_O (float, 0.26) : Cutoff in nm for calculating protein-water contacts
+           contact_method (str, 'cutoff') : Method for calculating protein-water contacts
+           switch_method (str, 'rational_6_12') : Method for switching function if contact_method == 'switch'
+           switch_scale (float, 1.0) : scale (gradient) for switching function if contact_method == 'switch'
+           switch_width (float, 0.25) : Width in nm over which switching function is applied
 
        Run a by-residue deuterated fraction prediction with these parameters
        using the PH.run method."""

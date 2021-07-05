@@ -23,7 +23,23 @@ class DfPredictor(object):
 
        Default parameters can either be updated directly in the self.params
        dictionary or by supplying a extra parameters as kwargs during
-       initialisation of the child class, e.g.: BV(cut_nc=1.0) or PH(**param_dict)"""
+       initialisation of the child class, e.g.: BV(cut_nc=1.0) or PH(**param_dict)
+       
+       Parameters (type, default value) defined here, and common to all DfPredictor methods:
+           protonly (bool, True) : Only calculate protection arising from atoms defined as part of the protein in the topology. Other atoms (ligand, lipids, ions) do not contribute to structural protection
+           save_detailed (bool, False) : For each residue, write text files to disk describing the individual structural contributions (e.g. H-bonds, contacts) to protection at each trajectory frame. Useful for debugging or reweighting
+           skip_first (bool, True) : Exclude the N-terminal residue in each peptide from deuteration calculations, as it is assumed to be fully back-exchanged
+           kint_adjs (dict, None) : Adjustments to the default sequence-based intrinsic rates of Nguyen 2018 & Bai 1993. Each key is a residue name, and each value a list of the adjustments to the Ala intrinsic rate, in the order [ lgAL, lgAR, lgBL, lgBR ], as defined in Table 2 of Nguyen et al., J. Am. Soc. Mass Spec., 2018, 29, 1936-1939. E.g. kint_adjs = { 'GLY': [ -0.22, 0.22, -0.03, 0.17 ] }. Only adjust these parameters if you wish to adjust the intrinsic rate calculations!
+           kint_params (dict, None) : Adjustments to the experimental constants & conditions used for intrinsic rate calculations. Each key/value pair corresponds to an experimental parameter. The following parameters (default value) can be adjusted: lgkAref (2.04), lgkBref (10.36), lgkWref (-1.5), EaA (14.0), EaB (17.0), EaW (19.0), R (0.001987), Tref (293), Texp (298), pKD (14.87), pD (7.4). Only adjust these parameters if you wish to adjust the intrinsic rate calculations!
+           times (list, [0.167, 1.0, 10.0, 120.0]) : Labeling times in minutes at which to calculate deuteration
+           segfile (str, 'segfile.txt') : File containing the peptides for deuteration calculations
+           expfile (str, None) : File containing the experimental deuteration values for comparison to predicted values
+           logfile (str, 'HDX_analysis.log') : File for message logging during the protection factor predictions 
+           outprefix (str, '') : Prefix for all output files from HDXer
+
+       Additional parameters can be defined specifically for each protection factor predictive model - see the docstrings of each child class for details.
+
+       """
 
     def __init__(self, **extra_params):
         """Initialises a deuterated fraction predictor and updates
