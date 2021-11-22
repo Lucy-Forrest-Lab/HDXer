@@ -84,7 +84,6 @@ class MaxEnt():
                          'segfilters' : None,
                          'lambdas' : None,
                          'nframes' : None,
-                         'iniweights' : None,
                          'minuskt_filtered' : None,
                          'exp_dfrac_filtered' : None,
                          'n_datapoints' : None,
@@ -143,7 +142,20 @@ class MaxEnt():
 
         # Random initial weights perturb the ensemble - e.g. can we recreate the final ensemble obtained with equally weighted frames?
         # Seed for random state will be printed out in logfile for reproducibility
-        if self.methodparams['random_initial']:
+        if self.runparams['iniweights'] is not None:
+            try:
+                _iniweights = np.array(self.runparams['iniweights'])
+            except:
+                raise HDX_Error("You supplied initial weights in a form that can't be converted to a numpy array, please check your inputs")
+            try:
+                assert(np.isclose(sum(self.runparams['iniweights']), _nframes))
+            except AssertionError:
+                raise HDX_Error("You supplied initial weights but the weights don't add up to the number of trajectory frames")
+            try:
+                assert(len(self.runparams['iniweights']) == _nframes)
+            except AssertionError:
+                raise HDX_Error("You supplied initial weights but the number of weights doesn't equal the number of trajectory frames")
+        elif self.methodparams['random_initial']:
             np.random.seed(None)
             statenum = np.random.randint(2**32)
             state = np.random.RandomState(statenum)
@@ -207,7 +219,6 @@ class MaxEnt():
                          'segfilters' : None,
                          'lambdas' : None,
                          'nframes' : None,
-                         'iniweights' : None,
                          'minuskt_filtered' : None,
                          'exp_dfrac_filtered' : None,
                          'n_datapoints' : None,
@@ -291,7 +302,20 @@ class MaxEnt():
 
         # Random initial weights perturb the ensemble - e.g. can we recreate the final ensemble obtained with equally weighted frames?
         # Seed for random state will be printed out in logfile for reproducibility
-        if self.methodparams['random_initial']:
+        if self.runparams['iniweights'] is not None:
+            try:
+                _iniweights = np.array(self.runparams['iniweights'])
+            except:
+                raise HDX_Error("You supplied initial weights in a form that can't be converted to a numpy array, please check your inputs")
+            try:
+                assert(np.isclose(sum(self.runparams['iniweights']), _nframes))
+            except AssertionError:
+                raise HDX_Error("You supplied initial weights but the weights don't add up to the number of trajectory frames")
+            try:
+                assert(len(self.runparams['iniweights']) == _nframes)
+            except AssertionError:
+                raise HDX_Error("You supplied initial weights but the number of weights doesn't equal the number of trajectory frames")
+        elif self.methodparams['random_initial']:
             np.random.seed(None)
             statenum = np.random.randint(2**32)
             state = np.random.RandomState(statenum)
@@ -380,7 +404,8 @@ class MaxEnt():
         self.runparams = { 'do_subsample': False,
                            'sub_start': 0,
                            'sub_end': -1,
-                           'sub_interval': 1 }
+                           'sub_interval': 1,
+                           'iniweights': None }
         self.runparams['gamma'] = gamma
 
         if restart is not None:
@@ -908,6 +933,7 @@ class MaxEnt():
                    sub_start (0) : Starting index (inclusive) for subsampling the trajectory frames
                    sub_end (-1) : Ending index (exclusive, use '-1' to denote final frame) for subsampling the trajectory frames
                    sub_interval (1) : Interval for subsampling the trajectory frames
+                   iniweights (None) : Initial weights for each trajectory frame, if each frame is not equally-weighted
 
             2) Start a new run from scratch, reading input data from calc_hdx objects
                Arguments required:
@@ -920,8 +946,9 @@ class MaxEnt():
                    sub_start (0) : Starting index (inclusive) for subsampling the trajectory frames
                    sub_end (-1) : Ending index (exclusive, use '-1' to denote final frame) for subsampling the trajectory frames
                    sub_interval (1) : Interval for subsampling the trajectory frames
+                   iniweights (None) : Initial weights for each trajectory frame, if each frame is not equally-weighted
 
-            3) Restart a run that is alrady partially complete
+            3) Restart a run that is already partially complete
                Arguments required:
                    restart      : Path to a HDXer.reweighting restart file, with '.pkl' suffix
                Optional arguments:
