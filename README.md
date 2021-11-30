@@ -16,7 +16,7 @@ HDXer
 - [matplotlib](https://matplotlib.org)
 - [pytest](https://docs.pytest.org/en/stable)
 - [JupyterLab](https://jupyterlab.readthedocs.io/en/stable/getting_started/overview.html)
-- [HDXer](https://github.com/TMB-CSB/HDXer)
+- [HDXer](https://github.com/Lucy-Forrest-Lab/HDXer)
 
 ---
 
@@ -65,7 +65,7 @@ You can call this script or other initialization command in your ```~/.bashrc```
 Download the *HDXer* Python package using git clone.
 
 ```bash
-git clone https://github.com/TMB-CSB/HDXer
+git clone https://github.com/Lucy-Forrest-Lab/HDXer
 ```
 
 Once the *HDXer* Python package is downloaded, create a new conda environment that includes all of the dependencies.
@@ -138,7 +138,7 @@ The tests will take roughly 60 seconds to complete. All tests should pass. If yo
 
 ## **Tutorials**
 
-The tutorials for the ***HDXer*** are available in a series of easy-to-follow Jupyter notebooks. These notebooks can be viewed within the [GitHub page](https://github.com/TMB-CSB/HDXer/tree/master/tutorials) or with Jupyter Lab. You will be able to run code interactively within each notebook using Jupyter Lab. Run the following commands on terminal to access the notebooks using Jupyter Lab:
+The tutorials for the ***HDXer*** are available in a series of easy-to-follow Jupyter notebooks. These notebooks can be viewed within the [GitHub page](https://github.com/Lucy-Forrest-Lab/HDXer/tree/master/tutorials) or with Jupyter Lab. You will be able to run code interactively within each notebook using Jupyter Lab. Run the following commands on terminal to access the notebooks using Jupyter Lab:
 
 ```bash
 cd $HDXER_PATH/tutorials/notebooks

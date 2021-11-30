@@ -12,7 +12,7 @@ def helptext():
                "compare to experiment, and perform ensemble refinement to fit a structural ensemble\n"
                "to the experimental data.\n\n"
                "If you are lost, please see the webpage "
-               "github.com/TMB-CSB/HDXer for details and example uses")
+               "github.com/Lucy-Forrest-Lab/HDXer for details and example uses")
     return helptext
 
 

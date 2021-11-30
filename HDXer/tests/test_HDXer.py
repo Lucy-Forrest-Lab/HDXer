@@ -16,6 +16,6 @@ def test_HDXer_helptext():
                "compare to experiment, and perform ensemble refinement to fit a structural ensemble\n"
                "to the experimental data.\n\n"
                "If you are lost, please see the webpage "
-               "github.com/TMB-CSB/HDXer for details and example uses")
+               "github.com/Lucy-Forrest-Lab/HDXer for details and example uses")
     out_helptext = HDXer.hdxer.helptext()
     assert out_helptext == expected_helptext
