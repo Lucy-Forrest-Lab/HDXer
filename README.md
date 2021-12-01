@@ -3,8 +3,8 @@ HDXer
 ## **Introduction**
 
 ***HDXer*** is a Python package that can be used to:
-- Predict Hydrogen-Deuterium exchange (HDX) data from an atomistic ensemble of protein structures (e.g. from molecular dynamics simulations)
-- Reweight a candidate ensemble by applying a maximum-entropy biasing scheme, so that the predicted HDX data conform to a target experimental set of HDX-MS data, within a defined level of error
+- Compute Hydrogen-Deuterium exchange (HDX) data from an atomistic ensemble of protein structures (e.g. from molecular dynamics simulations)
+- Reweight a candidate ensemble by applying a maximum-entropy biasing scheme, so that the computed HDX data conform to a target experimental set of HDX-MS data, within a defined level of error
 
 ---
 
@@ -153,7 +153,7 @@ In the *notebooks/* directory, there are five Jupyter notebooks.
 - 04_decision_plot.ipynb
 - 05_heatmap.ipynb
 
-These notebooks will walk you through how to run ***HDXer*** and how to analyze the results with an example application of both HDX predictions and ensemble reweighting.
+These notebooks will walk you through how to run ***HDXer*** and how to analyze the results with an example application of both HDX calculations and ensemble reweighting.
 
 N.B. As per the Jupyter website, the Jupyter Notebook aims to support the latest versions of these browsers:
 
