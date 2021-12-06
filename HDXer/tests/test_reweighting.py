@@ -431,7 +431,13 @@ def test_run_no_reweight_1():
 
     # compare file contents with filecmp
     for out_file, expected_file in zip(test_files, expected_files):
-        assert filecmp.cmp(out_file, expected_file, shallow=False)
+        try:
+            assert filecmp.cmp(out_file, expected_file, shallow=False)
+        except AssertionError:
+            print(f"Small differences in output file {out_file}, checking numerical accuracy with np.allclose. These differences may arise between Windows, Mac, & Linux architectures.")
+            expected_contents = np.loadtxt(expected_file)
+            test_contents = np.loadtxt(out_file)
+            assert np.allclose(expected_contents, test_contents)
 
 
 def test_run_partial_reweight_4():
@@ -467,7 +473,13 @@ def test_run_partial_reweight_4():
 
     # compare file contents with filecmp
     for out_file, expected_file in zip(test_files, expected_files):
-        assert filecmp.cmp(out_file, expected_file, shallow=False)
+        try:
+            assert filecmp.cmp(out_file, expected_file, shallow=False)
+        except AssertionError:
+            print(f"Small differences in output file {out_file}, checking numerical accuracy with np.allclose. These differences may arise between Windows, Mac, & Linux architectures.")
+            expected_contents = np.loadtxt(expected_file)
+            test_contents = np.loadtxt(out_file)
+            assert np.allclose(expected_contents, test_contents)
 
 
 def test_run_full_reweight_4():
@@ -505,4 +517,10 @@ def test_run_full_reweight_4():
 
     # compare file contents with filecmp
     for out_file, expected_file in zip(test_files, expected_files):
-        assert filecmp.cmp(out_file, expected_file, shallow=False)
+        try:
+            assert filecmp.cmp(out_file, expected_file, shallow=False)
+        except AssertionError:
+            print(f"Small differences in output file {out_file}, checking numerical accuracy with np.allclose. These differences may arise between Windows, Mac, & Linux architectures.")
+            expected_contents = np.loadtxt(expected_file)
+            test_contents = np.loadtxt(out_file)
+            assert np.allclose(expected_contents, test_contents)
