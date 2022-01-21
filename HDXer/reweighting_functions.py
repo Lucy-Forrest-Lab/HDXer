@@ -35,16 +35,17 @@ def strip_filename(filename, prefix):
 
 
 # Read in single column datafiles
-def files_to_array(filenames):
+def files_to_array(filenames, array_dtype=np.float32):
     """Read in data fom list of files with np.loadtxt.
 
        Inputs:
            filenames ( list(str1, str2, ...) ) : files to read in
+           array_dtype [np.float32] : Numpy datatype of the desired array. Defaults to single precision float.
 
         Returns:
            Stacked array of the file data ( np.array(n_files, n_lines_per_file) )
     """
-    datalist = [ np.loadtxt(file) for file in filenames ]
+    datalist = [ np.loadtxt(file, dtype=array_dtype) for file in filenames ]
     try:
         return np.stack(datalist, axis=0)
     except ValueError:
@@ -106,7 +107,7 @@ def read_contacts_hbonds(folderlist, contacts_prefix, hbonds_prefix):
     filters = list(map(lambda _: np.in1d(_, sorted_resids_per_folder[0]), resids))  # Get indices to filter by shortest
     new_resids = []
     for r, f in list(zip(resids, filters)):
-        new_resids.append(np.array(r)[f])
+        new_resids.append(np.array(r, dtype=np.int16)[f])
     new_resids = np.stack(new_resids)
     if not np.diff(new_resids, axis=0).sum():  # If sum of differences between filtered resids == 0
         pass
@@ -115,9 +116,9 @@ def read_contacts_hbonds(folderlist, contacts_prefix, hbonds_prefix):
             "Error in filtering trajectories to common residues - do residue IDs match up in your contacts/H-bond files?")
 
     _contacts = list(
-        map(lambda x, y: x[y], [files_to_array(curr_cfiles) for curr_cfiles in contactfiles], filters))
+        map(lambda x, y: x[y], [files_to_array(curr_cfiles, dtype=np.int16) for curr_cfiles in contactfiles], filters))
     _hbonds = list(
-        map(lambda x, y: x[y], [files_to_array(curr_hfiles) for curr_hfiles in hbondfiles], filters))
+        map(lambda x, y: x[y], [files_to_array(curr_hfiles, dtype=np.int16) for curr_hfiles in hbondfiles], filters))
 
     contacts = np.concatenate(_contacts, axis=1)
     print("Contacts read")
@@ -160,15 +161,15 @@ def read_kints_segments(kintfile, expt_path, n_res, times, sorted_resids):
 
        Returns: minuskt, expt_dfrac, segfilters (all of shape [n_segments, n_residues, n_times])"""
 
-    kint = np.loadtxt(kintfile, usecols=(1,)) # We only need one file here and it'll be filtered based on its residue IDs
-    kintresid = np.loadtxt(kintfile, usecols=(0,))
+    kint = np.loadtxt(kintfile, usecols=(1,), dtype=np.float32) # We only need one file here and it'll be filtered based on its residue IDs
+    kintresid = np.loadtxt(kintfile, usecols=(0,), dtype=np.int16)
     kintfilter = np.in1d(kintresid, sorted_resids[0])
     kint = kint[kintfilter]
     final_resid = kintresid[kintfilter]
     kint = np.repeat(kint[:, np.newaxis], len(times), axis=1)*times # Make sure len(times) is no. of expt times
     # Read deuterated fractions, shape will be (n_residues, n_times)
-    exp_dfrac = np.loadtxt(expt_path, usecols=tuple(range(2,2+len(times))))
-    segments = np.loadtxt(expt_path, usecols=(0,1), dtype=np.int32)
+    exp_dfrac = np.loadtxt(expt_path, usecols=tuple(range(2,2+len(times))), dtype=np.float32)
+    segments = np.loadtxt(expt_path, usecols=(0,1), dtype=np.int16)
 
     # check for edge case of only fitting to a single peptide
     if len(exp_dfrac.shape) < 2:
@@ -185,7 +186,7 @@ def read_kints_segments(kintfile, expt_path, n_res, times, sorted_resids):
     for seg in segments:
         seg_resids = range(seg[0], seg[1]+1)
         segfilters.append(np.in1d(final_resid, seg_resids[1:])) # Filter but skipping first residue in segment
-    segfilters = np.array(segfilters)
+    segfilters = np.array(segfilters, dtype=np.int16)
     segfilters = np.repeat(segfilters[:, :, np.newaxis], len(times), axis=2) # Repeat to shape (n_segments, n_residues, n_times)
 
     assert all((segfilters.shape == exp_dfrac.shape,

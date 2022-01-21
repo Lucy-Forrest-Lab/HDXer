@@ -228,7 +228,7 @@ class MaxEnt():
                          'curr_lambda_stepsize' : None,
                          'curriter' : None,
                          'is_converged' : None }
-        _contacts, _hbonds, _sorted_resids = resultsobj.contacts, resultsobj.hbonds, np.array([ resultsobj.top.residue(residx).resSeq for residx in resultsobj.reslist ])
+        _contacts, _hbonds, _sorted_resids = resultsobj.contacts, resultsobj.hbonds, np.array([ resultsobj.top.residue(residx).resSeq for residx in resultsobj.reslist ], dtype=np.int16)
         if self.runparams['do_subsample']:
             _contacts, _hbonds = subsample_contacts_hbonds(_contacts, _hbonds,
                                                            self.runparams['sub_start'],
@@ -253,7 +253,7 @@ class MaxEnt():
         for seg in _segments:
             seg_resids = range(seg[0], seg[1] + 1)
             _segfilters.append(np.in1d(_sorted_resids, seg_resids[1:]))  # Filter but skipping first residue in segment
-        _segfilters = np.array(_segfilters)
+        _segfilters = np.array(_segfilters, dtype=np.int16)
         _segfilters = np.repeat(_segfilters[:, :, np.newaxis], len(self.runparams['times']),
                                axis=2)  # Repeat to shape (n_segments, n_residues, n_times)
 
