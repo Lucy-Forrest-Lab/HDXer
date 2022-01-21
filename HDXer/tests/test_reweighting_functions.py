@@ -42,8 +42,27 @@ def test_read_contacts_hbonds():
                         [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ] * 2,
                         [ 4, 4, 22, 4, 11, 4, 23, 3, 10, 5 ] * 2 ])
 
+    expected_hbonds_int = np.array([ 
+                          [ 1, 1, 1, 0, 0, 2, 0, 0, 0, 0 ] * 2,
+                          [ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ] * 2,
+                          [ 2, 2, 2, 2, 2, 1, 1, 1, 1, 1 ] * 2,
+                          [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ] * 2,
+                          [ 0, 1, 0, 0, 0, 0, 0, 0, 1, 0 ] * 2,
+                          [ 1, 0, 2, 0, 1, 0, 2, 0, 1, 0 ] * 2 ], dtype=np.int16)
+
+    expected_contacts_int = np.array([ 
+                            [ 10, 10, 10, 5, 5, 20, 5, 5, 5, 5 ] * 2,
+                            [ 10, 10, 10, 10, 10, 10, 10, 10, 10, 10 ] * 2,
+                            [ 20, 20, 20, 20, 20, 10, 10, 10, 10, 10 ] * 2,
+                            [ 10, 10, 10, 5, 5, 20, 5, 5, 5, 5 ] * 2,
+                            [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ] * 2,
+                            [ 4, 4, 22, 4, 11, 4, 23, 3, 10, 5 ] * 2 ], dtype=np.int16)
+
     assert np.array_equal(reweighting_functions.files_to_array(c_files), expected_contacts[:,:10])
     assert np.array_equal(reweighting_functions.files_to_array(h_files), expected_hbonds[:,:10])
+    # Check array_dtype functionality
+    assert np.array_equal(reweighting_functions.files_to_array(c_files, array_dtype=np.int16), expected_contacts_int[:,:10])
+    assert np.array_equal(reweighting_functions.files_to_array(h_files, array_dtype=np.int16), expected_hbonds_int[:,:10])
 
     expected_resids = [ [ 2, 3, 4, 5, 6, 7 ] , [ 2, 3, 4, 5, 6, 7, 8, 9 ] ]
 
@@ -157,7 +176,7 @@ def test_read_kints_segments():
     # Filter is hard coded to skip the first residue in the segment 
     expected_segfilters = np.array([[ False, True, True, True, True, True ],
                                     [ False, True, True, True, True, False ],
-                                    [ False, False, True, True, False, False ]])
+                                    [ False, False, True, True, False, False ]], dtype=np.int16)
     expected_segfilters = np.repeat(expected_segfilters[:, :, np.newaxis], len(test_times), axis=2)
 
     out_minuskt, out_expt, out_segfilters = reweighting_functions.read_kints_segments(str(test_rates_file),

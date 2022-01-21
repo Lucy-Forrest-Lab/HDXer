@@ -116,9 +116,9 @@ def read_contacts_hbonds(folderlist, contacts_prefix, hbonds_prefix):
             "Error in filtering trajectories to common residues - do residue IDs match up in your contacts/H-bond files?")
 
     _contacts = list(
-        map(lambda x, y: x[y], [files_to_array(curr_cfiles, dtype=np.int16) for curr_cfiles in contactfiles], filters))
+        map(lambda x, y: x[y], [files_to_array(curr_cfiles, array_dtype=np.int16) for curr_cfiles in contactfiles], filters))
     _hbonds = list(
-        map(lambda x, y: x[y], [files_to_array(curr_hfiles, dtype=np.int16) for curr_hfiles in hbondfiles], filters))
+        map(lambda x, y: x[y], [files_to_array(curr_hfiles, array_dtype=np.int16) for curr_hfiles in hbondfiles], filters))
 
     contacts = np.concatenate(_contacts, axis=1)
     print("Contacts read")
@@ -161,14 +161,14 @@ def read_kints_segments(kintfile, expt_path, n_res, times, sorted_resids):
 
        Returns: minuskt, expt_dfrac, segfilters (all of shape [n_segments, n_residues, n_times])"""
 
-    kint = np.loadtxt(kintfile, usecols=(1,), dtype=np.float32) # We only need one file here and it'll be filtered based on its residue IDs
+    kint = np.loadtxt(kintfile, usecols=(1,), dtype=np.float64) # We only need one file here and it'll be filtered based on its residue IDs
     kintresid = np.loadtxt(kintfile, usecols=(0,), dtype=np.int16)
     kintfilter = np.in1d(kintresid, sorted_resids[0])
     kint = kint[kintfilter]
     final_resid = kintresid[kintfilter]
     kint = np.repeat(kint[:, np.newaxis], len(times), axis=1)*times # Make sure len(times) is no. of expt times
     # Read deuterated fractions, shape will be (n_residues, n_times)
-    exp_dfrac = np.loadtxt(expt_path, usecols=tuple(range(2,2+len(times))), dtype=np.float32)
+    exp_dfrac = np.loadtxt(expt_path, usecols=tuple(range(2,2+len(times))), dtype=np.float64)
     segments = np.loadtxt(expt_path, usecols=(0,1), dtype=np.int16)
 
     # check for edge case of only fitting to a single peptide
