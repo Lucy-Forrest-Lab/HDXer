@@ -178,14 +178,14 @@ class Analyze():
             with open(self.params['logfile'], 'a') as f:
                 f.write("Chain indices read from segments file - segment averaging will be performed on defined chains\n")
             self._single_chain = False
-        except IndexError:
+        except ValueError:
             tmp_segres = np.loadtxt(self.params['segfile'], dtype=np.int32, usecols=(0,1)) 
             with open(self.params['logfile'], 'a') as f:
                 f.write("Chain indices NOT read from segments file - segment averaging will be performed on first chain\n")
             self.segres = np.zeros(len(tmp_segres), dtype=[ ('segres', np.int32, (2,)), ('chain', np.int32, (1)) ])
             self.segres['segres'] = tmp_segres            
             self._single_chain = True
-        except ValueError:
+        except:
             raise HDX_Error("There's a problem reading the values in your segments file: %s \n"
                             "File should contain either 2 or 3 columns of integers, separated by spaces.\n"
                             "Format: start_residue end_residue chain_index[optional]")
