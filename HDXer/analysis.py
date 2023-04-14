@@ -174,22 +174,22 @@ class Analyze():
         # segfile should contain at most 3 columns: startres, endres, chain_idx
         try:
             self.segres = np.loadtxt(self.params['segfile'],
-                                     dtype=[ ('segres', np.int32, (2,)), ('chain', np.int32, (1)) ])  # ResIDs will be converted to indices with dictionary in segments function
+                                     dtype=[ ('segres', np.int32, (2,)), ('chain', np.int32) ])  # ResIDs will be converted to indices with dictionary in segments function
             with open(self.params['logfile'], 'a') as f:
                 f.write("Chain indices read from segments file - segment averaging will be performed on defined chains\n")
             self._single_chain = False
-        except IndexError:
-            tmp_segres = np.loadtxt(self.params['segfile'], dtype=np.int32, usecols=(0,1)) 
-            with open(self.params['logfile'], 'a') as f:
-                f.write("Chain indices NOT read from segments file - segment averaging will be performed on first chain\n")
-            self.segres = np.zeros(len(tmp_segres), dtype=[ ('segres', np.int32, (2,)), ('chain', np.int32, (1)) ])
-            self.segres['segres'] = tmp_segres            
-            self._single_chain = True
-        except ValueError:
-            raise HDX_Error("There's a problem reading the values in your segments file: %s \n"
-                            "File should contain either 2 or 3 columns of integers, separated by spaces.\n"
-                            "Format: start_residue end_residue chain_index[optional]")
-
+        except:
+            try:
+                tmp_segres = np.loadtxt(self.params['segfile'], dtype=np.int32, usecols=(0,1)) 
+                with open(self.params['logfile'], 'a') as f:
+                    f.write("Chain indices NOT read from segments file - segment averaging will be performed on first chain\n")
+                self.segres = np.zeros(len(tmp_segres), dtype=[ ('segres', np.int32, (2,)), ('chain', np.int32) ])
+                self.segres['segres'] = tmp_segres            
+                self._single_chain = True
+            except:
+                raise HDX_Error("There's a problem reading the values in your segments file: %s \n"
+                                "File should contain either 2 or 3 columns of integers, separated by spaces.\n"
+                                "Format: start_residue end_residue chain_index[optional]")
 
     def read_expfile(self):
         """Reads an experimental data file for comparison to predicted data.
@@ -206,7 +206,7 @@ class Analyze():
                                   ('fracs', np.float64, (len(self.params['times']),)) ])
             else:
                 expt = np.loadtxt(self.params['expfile'], dtype=[ ('segres', np.int32, (2,)),
-                                  ('chain', np.int32, (1)), ('fracs', np.float64, (len(self.params['times']),)) ])
+                                  ('chain', np.int32), ('fracs', np.float64, (len(self.params['times']),)) ])
         except ValueError as err:
             raise HDX_Error("There's a problem with the experimental data file. It has too few timepoints. \n" \
                             "This can be caused if you've defined chain indices in the segments file but not in the experimental data file.\n" \
@@ -218,7 +218,7 @@ class Analyze():
                                   ('fracs', np.float64, (len(self.params['times']) + 1,)) ])
             else:
                 expt = np.loadtxt(self.params['expfile'], dtype=[ ('segres', np.int32, (2,)),
-                                  ('chain', np.int32, (1)), ('fracs', np.float64, (len(self.params['times']) + 1,)) ])
+                                  ('chain', np.int32), ('fracs', np.float64, (len(self.params['times']) + 1,)) ])
             raise HDX_Error("There's a problem with the experimental data file. It has too many timepoints. \n" 
                             "This can be caused if you've defined chain indices in the experimental data file but not in the segments file.\n")
         except ValueError:
